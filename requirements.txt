@@ -1,0 +1,6 @@
+PyOpenGL
+glfw
+pyquaternion
+
+# Para exibir textos na tela
+# freetype-py
