@@ -9,6 +9,10 @@ Disciplina: Computação Gráfica
 Data: 23 de Abril de 2023
 """
 
+
+import contextlib, sys
+
+
 # Pacotes para o desenvolvimento do sistema
 from OpenGL.GL import *
 import glfw
@@ -185,8 +189,10 @@ def add_geometry(mode, vertices, normals=None, colors=None, uvs=None, create_nor
 
         count = len(index)*3
 
-    
-    data = np.array(data, np.float32).flatten()
+    print(data)
+    #data = np.array(data, np.float32).flatten()
+    data = np.array([j for i in data for j in i], np.float32)
+    #print(data)
 
     # Cria o VBO (Vertex Buffer Object) para armazenar vértices
     verticesVBO = arrays.vbo.VBO(data, usage='GL_STATIC_DRAW')
@@ -240,160 +246,203 @@ class Renderizador:
     def set_background_color(self, color):
         self.background_color = color
 
+
+
+    
+
     # Cria a jenala de renderização
     def __init__(self, resolution, near, far):
 
         self.window = None
+ 
+        self.resolution = (600, 400)
+        self.near = 0.1
+        self.far = 100
 
         # Cor padrão para o fundo da janela (para apagar o buffer de cores)
         self.background_color = (0.0, 0.0, 0.0, 1.0)
 
         # Título padrão da janela de renderização
         self.title = "Computação Gráfica"
-
-
-
+       
         # Cria recursos de manipulação de câmera
         #self.camera = Camera("fly", resolution, near=near, far=far)
-        self.camera = Camera("examine", resolution, near=near, far=far)
+        self.camera = Camera("examine", self.resolution, near=self.near, far=self.far)
         Callbacks.camera  = self.camera
 
 
-        # Inicia e configura o glfw
+
+    @contextlib.contextmanager
+    def create_main_window(self):
+
         if not glfw.init():
             raise Exception("Não foi possível iniciar o glfw")
-        glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
-        glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
-        glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+            #sys.exit(1)
+        try:
+            # Inicia e configura o glfw
+            glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
+            glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
+            glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, True)
+            # Chamada para Mac para suportar chamadas antigas (deprecated)
+            if platform.system().lower() == 'darwin':
+                glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, GL_TRUE)
 
-        # Chamada para Mac para suportar chamadas antigas (deprecated)
-        if platform.system().lower() == 'darwin':
-            glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, GL_TRUE)
+            glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
 
-        # Cria a janela principal e colocar no contexto atual
-        Callbacks.resolution = resolution
-        self.window = glfw.create_window(resolution[0], resolution[1], self.title, None, None)
-        if not self.window:
+            #self.window = glfw.create_window(500, 400, self.title, None, None)
+            self.window = glfw.create_window(self.resolution[0], self.resolution[1], self.title, None, None)
+
+            if not self.window:
+                glfw.terminate()
+                raise Exception("Não foi possível criar a janela glfw")
+                #sys.exit(2)
+            glfw.make_context_current(self.window)
+
+            glfw.set_input_mode(self.window, glfw.STICKY_KEYS, True)
+            #glClearColor(0, 0, 0.4, 0)
+
+
+
+            # Cria a janela principal e colocar no contexto atual
+            Callbacks.resolution = self.resolution
+                
+            #glfw.set_window_pos(window, 0, 0) # define a posição da janela
+
+            yield self.window
+
+        finally:
             glfw.terminate()
-            raise Exception("Não foi possível criar a janela glfw")
-        glfw.make_context_current(self.window)
-        #glfw.set_window_pos(window, 0, 0) # define a posição da janela
+
+
+
 
     def render(self, vertex_shader_source=None, fragment_shader_source=None, uniforms_source={}):
 
-        if self.window == None:
-            raise Exception("Janela não foi criada")
-        
         if vertex_shader_source == None:
             vertex_shader_source = default_vertex_shader
 
         if fragment_shader_source == None:
             fragment_shader_source = default_fragment_shader
 
-        # Versões de Mac não suportam debug
-        if platform.system().lower() != 'darwin':
-            # Exibe mensagens de Debug
-            glEnable(GL_DEBUG_OUTPUT)
-            glDebugMessageCallback(GLDEBUGPROC(Callbacks.debug_message_callback), None)
+        with self.create_main_window() as window:
 
-        # inicializa a posição do cursor
-        Callbacks.cursor_pos = glfw.get_cursor_pos(self.window)
-
-        # Define o callback para caso a janela seja redimensionada, teclas pressionadas ou movimento do mouse
-        glfw.set_framebuffer_size_callback(self.window, Callbacks.framebuffer_size_callback)
-        glfw.set_key_callback(self.window, Callbacks.key_callback)
-        glfw.set_cursor_pos_callback(self.window, Callbacks.cursor_pos_callback)
-        glfw.set_scroll_callback(self.window, Callbacks.scroll_callback)
-
-        # desativa a apresentação do cursor
-        glfw.set_input_mode(self.window, glfw.CURSOR, glfw.CURSOR_DISABLED)
-
-        # Ativa o Z-Buffer
-        glEnable(GL_DEPTH_TEST)
-
-
-
-
-        #########
-        # mode = GL_TRIANGLE_STRIP
-        # vao, count  = add_geometry(GL_TRIANGLE_STRIP, vertices, colors=colors, uvs=uvs, create_normals=True)
-
-        mode = GL_TRIANGLES
-        #vao, count = set_geometry()
-        vao, count  = add_geometry(GL_TRIANGLES, vertices, create_normals=True, index=index)
-
-
-        # Compila os shaders
-        vertexShader_id = compile_shader(GL_VERTEX_SHADER, vertex_shader_source)
-        fragmentShader_id = compile_shader(GL_FRAGMENT_SHADER, fragment_shader_source)
-
-        # Conecta (link) os shaders para a aplicação
-        program_id = link_shader(vertexShader_id, fragmentShader_id)
-        
-        # Configura os Uniforms para os shaders
-        uniforms = {}
-
-        # Cadastra os Uniforms básicos do ShaderToy
-        uniforms["iResolution"] = glGetUniformLocation(program_id, 'iResolution')
-        uniforms["iTime"] = glGetUniformLocation(program_id, 'iTime')
-
-        # Cadastra os Uniforms
-        for field in uniforms_source:
-            uniforms[field] = glGetUniformLocation(program_id, field)    
-
-        # remove os shaders da memória
-        glDeleteShader(vertexShader_id)
-        glDeleteShader(fragmentShader_id)
-
-        # Define no contexto qual a cor para limpar o buffer de cores
-        glClearColor(*self.background_color)
-
-        # Realiza a renderização enquanto a janela não for fechada
-        while not glfw.window_should_close(self.window):
-
-            # Limpa a janela com a cor de fundo e apagar o z-buffer
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-
-            # use our own rendering program
-            glUseProgram(program_id)
-
-            passed_time = glfw.get_time()  # returna o tempo passado desde que a aplicação começou
-
-            # Fazendo os uniforms básicos do ShaderToy
-            glUniform2f(uniforms["iResolution"], Callbacks.resolution[0], Callbacks.resolution[1])
-            glUniform1f(uniforms["iTime"], passed_time)
-
-            parse_uniforms(uniforms_source, uniforms)
-
-            # Ativa (bind) VAO
-            glBindVertexArray(vao)
-
-            # Desenha os vértices como triângulos
-            glDrawArrays(mode, 0, count)
+            if self.window == None:
+                raise Exception("Janela não foi criada")
             
-            # Desativa (unbind) o VAO
-            glBindVertexArray(0)
+            # Versões de Mac não suportam debug
+            if platform.system().lower() != 'darwin':
+                # Exibe mensagens de Debug
+                glEnable(GL_DEBUG_OUTPUT)
+                glDebugMessageCallback(GLDEBUGPROC(Callbacks.debug_message_callback), None)
 
-            # Detecta e armazena as chamadas de teclado
-            keyPressed = np.where(Callbacks.keyArray == True)
-            for key in keyPressed[0]:
-                self.camera.send_keys(key)
 
-            # captura e processa eventos da janela
-            glfw.poll_events()
 
-            # Faz a troca dos framebuffer (swap frame buffer)
-            glfw.swap_buffers(self.window)
+            # inicializa a posição do cursor
+            Callbacks.cursor_pos = glfw.get_cursor_pos(self.window)
 
-        # Limpa o VAO 
-        glDeleteVertexArrays(1, [vao])
-        #glDeleteVertexArrays(2, [triangleVAO, sphereVAO])
+            # Define o callback para caso a janela seja redimensionada, teclas pressionadas ou movimento do mouse
+            glfw.set_framebuffer_size_callback(self.window, Callbacks.framebuffer_size_callback)
+            glfw.set_key_callback(self.window, Callbacks.key_callback)
+            glfw.set_cursor_pos_callback(self.window, Callbacks.cursor_pos_callback)
+            glfw.set_scroll_callback(self.window, Callbacks.scroll_callback)
 
-        # Limpa o VBO
-        # vbo.delete()
+            # desativa a apresentação do cursor
+            glfw.set_input_mode(self.window, glfw.CURSOR, glfw.CURSOR_DISABLED)
 
-        # finaliza o glfw
-        glfw.terminate()
+            # Ativa o Z-Buffer
+            glEnable(GL_DEPTH_TEST)
+
+
+
+            #########
+            mode = GL_TRIANGLE_STRIP
+            vao, count  = add_geometry(GL_TRIANGLE_STRIP, vertices, colors=colors, uvs=uvs, create_normals=True)
+
+            #mode = GL_TRIANGLES
+            #vao, count = set_geometry()
+            #vao, count  = add_geometry(GL_TRIANGLES, vertices, create_normals=True, index=index)
+
+
+            # Compila os shaders
+            vertexShader_id = compile_shader(GL_VERTEX_SHADER, vertex_shader_source)
+            fragmentShader_id = compile_shader(GL_FRAGMENT_SHADER, fragment_shader_source)
+
+            # Conecta (link) os shaders para a aplicação
+            program_id = link_shader(vertexShader_id, fragmentShader_id)
+            
+            # Configura os Uniforms para os shaders
+            uniforms = {}
+
+
+            # Cadastra os Uniforms básicos do ShaderToy
+            uniforms["iResolution"] = glGetUniformLocation(program_id, 'iResolution')
+            uniforms["iTime"] = glGetUniformLocation(program_id, 'iTime')
+
+            # Cadastra os Uniforms
+            for field in uniforms_source:
+                uniforms[field] = glGetUniformLocation(program_id, field)    
+
+            # remove os shaders da memória
+            glDeleteShader(vertexShader_id)
+            glDeleteShader(fragmentShader_id)
+
+            # Define no contexto qual a cor para limpar o buffer de cores
+            glClearColor(*self.background_color)
+
+
+            # Realiza a renderização enquanto a janela não for fechada
+            #while not glfw.window_should_close(self.window):
+
+            while (
+                glfw.get_key(window, glfw.KEY_ESCAPE) != glfw.PRESS and
+                not glfw.window_should_close(self.window)
+            ):
+
+
+                # Limpa a janela com a cor de fundo e apagar o z-buffer
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+                # use our own rendering program
+                glUseProgram(program_id)
+
+                passed_time = glfw.get_time()  # returna o tempo passado desde que a aplicação começou
+
+                # Fazendo os uniforms básicos do ShaderToy
+                glUniform2f(uniforms["iResolution"], Callbacks.resolution[0], Callbacks.resolution[1])
+                glUniform1f(uniforms["iTime"], passed_time)
+
+                parse_uniforms(uniforms_source, uniforms)
+
+                # Ativa (bind) VAO
+                glBindVertexArray(vao)  #LIGAR
+
+                # Desenha os vértices como triângulos
+                glDrawArrays(mode, 0, count)  #LIGAR
+                
+                # Desativa (unbind) o VAO
+                glBindVertexArray(0)  #LIGAR
+
+                # Detecta e armazena as chamadas de teclado
+                keyPressed = np.where(Callbacks.keyArray == True)
+                for key in keyPressed[0]:
+                    self.camera.send_keys(key)
+
+                # captura e processa eventos da janela
+                glfw.poll_events()
+
+                # Faz a troca dos framebuffer (swap frame buffer)
+                glfw.swap_buffers(self.window)
+
+
+            # Limpa o VAO 
+            glDeleteVertexArrays(1, [vao])
+            #glDeleteVertexArrays(2, [triangleVAO, sphereVAO])
+
+            # Limpa o VBO
+            # vbo.delete()
+
+            # finaliza o glfw
+            glfw.terminate()
 
 
 # glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
