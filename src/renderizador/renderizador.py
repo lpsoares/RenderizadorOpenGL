@@ -325,7 +325,7 @@ class Renderizador:
 
 
             # inicializa a posição do cursor
-            Callbacks.cursor_pos = glfw.get_cursor_pos(self.window)
+            Callbacks.cursor_position = glfw.get_cursor_pos(self.window)
 
             # Define o callback para caso a janela seja redimensionada, teclas pressionadas ou movimento do mouse
             glfw.set_framebuffer_size_callback(self.window, Callbacks.framebuffer_size_callback)
@@ -419,14 +419,9 @@ class Renderizador:
                 # Fazendo os uniforms básicos do ShaderToy
                 width, height = glfw.get_framebuffer_size(self.window)
                 glUniform2f(uniforms["iResolution"], width, height)
-                
                 glUniform1f(uniforms["iTime"], passed_time)
-
-                mag = width/Callbacks.resolution[0]
-                posx, posy = glfw.get_cursor_pos(self.window)
-                glUniform4f(uniforms["iMouse"], posx*mag, height-posy*mag, 1, 1)
+                glUniform4fv(uniforms["iMouse"], 1, Callbacks.get_mouse_clicked(width, height))
                 
-
                 parse_uniforms(self.uniforms_source, uniforms)
 
                 # Ativa (bind) VAO

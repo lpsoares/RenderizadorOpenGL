@@ -20,7 +20,7 @@ import glfw
 class Callbacks:
 
     # Posição do cursor incial (deve ser atualizada na criação da tela)
-    cursor_position = (0, 0)
+    cursor_position = [0, 0]
 
     # stores which keys are pressed and handle key press in the main loop
     keyArray = np.array([False] * 640, bool)
@@ -31,12 +31,18 @@ class Callbacks:
     # Tamanho padrão de resolução da tela
     resolution = (1024, 768)
 
+    # Se mouse foi clicado
+    mouse_clicked = False
+    mouse_pressed = False
+    mouse_pos_clicked = [0, 0]
+    mouse_pos_down = [0, 0]
+
     # Para eventos de movimento do mouse
     def cursor_pos_callback(window, xpos, ypos):
-        offset = [xpos - Callbacks.cursor_pos[0],
-                  ypos - Callbacks.cursor_pos[1]]
+        offset = [xpos - Callbacks.cursor_position[0],
+                  ypos - Callbacks.cursor_position[1]]
         Callbacks.camera.send_mouse(offset)
-        Callbacks.cursor_pos = (xpos, ypos)
+        Callbacks.cursor_position = [xpos, ypos]
 
 
     # Para eventos do Scroll do mouse
@@ -66,17 +72,52 @@ class Callbacks:
         elif action == glfw.RELEASE:
             Callbacks.keyArray[key] = False
 
+    def get_mouse_clicked(width, height):
+
+        mag = width/Callbacks.resolution[0]
+
+        if Callbacks.mouse_pressed:
+            Callbacks.mouse_pos_down = Callbacks.cursor_position
+        
+        pos_clicked = np.array(Callbacks.mouse_pos_clicked)
+        pos_clicked *= int(mag)
+        pos_clicked[1] = height - pos_clicked[1]
+        pos_clicked[0] = max(0, min(pos_clicked[0], width))
+        pos_clicked[1] = max(0, min(pos_clicked[1], height))
+
+        pos_down = np.array(Callbacks.mouse_pos_down)
+        pos_down *= int(mag)
+        pos_down[1] = height - pos_down[1]
+        pos_down[0] = max(0, min(pos_down[0], width))
+        pos_down[1] = max(0, min(pos_down[1], height))
+
+        if Callbacks.mouse_clicked:
+            Callbacks.mouse_clicked = False
+        else:
+            pos_clicked[1] = -pos_clicked[1]
+
+        if not Callbacks.mouse_pressed:
+            pos_clicked[0] = -pos_clicked[0]
+
+        return [pos_down[0], pos_down[1], pos_clicked[0], pos_clicked[1]]
+
     def mouse_button_callback(window, button, action, mods):
-        if button == glfw.MOUSE_BUTTON_RIGHT:
-            print("MOUSE_BUTTON_RIGHT")
-
+        # if button == glfw.MOUSE_BUTTON_RIGHT:
+        #     print("MOUSE_BUTTON_RIGHT")
         if action == glfw.PRESS:
-            print("PRESS")
-        if action == glfw.RELEASE:
-            print("RELEASE")
+            Callbacks.mouse_clicked = True
+            Callbacks.mouse_pressed = True
+            Callbacks.mouse_pos_clicked = Callbacks.cursor_position
+            Callbacks.mouse_pos_down = Callbacks.cursor_position
 
-        if mods == glfw.MOD_NUM_LOCK:
-            print("MOD_NUM_LOCK")
+        elif action == glfw.RELEASE:
+            Callbacks.mouse_clicked = False
+            Callbacks.mouse_pressed = False
+            
+        # if mods == glfw.MOD_NUM_LOCK:
+        #     print("Mouse com MOD_NUM_LOCK")
+        
+        
 
 
     # Usado para exibir mensagens do OpenGL
