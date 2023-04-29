@@ -16,7 +16,6 @@ from renderizador.renderizador import *
 from renderizador.transformations import *
 
 vertex_shader_source = r'''
-#version 330 core
 layout (location = 0) in vec3 position;
 layout (location = 1) in vec3 normal;
 
@@ -43,9 +42,7 @@ void main()
 
 
 fragment_shader_source = r'''
-#version 330 core
-
-layout (location = 0) out vec4 FragColor;
+layout (location = 0) out vec4 fragColor;
 
 in vec3 fragPos;
 in vec3 bNormal;
@@ -80,7 +77,7 @@ void main()
     
     // Juntando todos os componentes luminosos no albedo
     vec3 result = (ambient + diffuse + specular) * material_albedo;
-    FragColor = vec4(result, 1.0);
+    fragColor = vec4(result, 1.0);
 
 }
 '''
@@ -103,11 +100,41 @@ if __name__ == '__main__':
 
     # Configurações de Materiais e Iluminação
     uniforms["light_color"] = [1.0, 1.0, 1.0]
-    uniforms["material_albedo"] = [0.7, 0.4, 0.9]
+    uniforms["material_albedo"] = [0.5, 0.7, 0.9]
     uniforms["ambient_coefficient"] = 0.4
     uniforms["specular_coefficient"] = 32
     uniforms["light_position"] = [-4.0, 2.0, 1.0]
 
     # Passando Shaders e renderizando cena
-    renderizador.render(vertex_shader_source, fragment_shader_source, uniforms)
-    #renderizador.render()
+    renderizador.set_shaders(vertex_shader_source, fragment_shader_source, uniforms)
+
+    # Vertices (forçando ser float32 para evitar que algum vire outro tipo)
+    vertices = np.array([
+        -1.0,  1.0, -1.0,
+        -1.0,  1.0,  1.0,
+        1.0,  1.0,  1.0,
+        1.0,  1.0, -1.0,
+        -1.0, -1.0, -1.0,
+        -1.0, -1.0,  1.0,
+        1.0, -1.0,  1.0,
+        1.0, -1.0, -1.0,
+    ], np.float32)
+
+    index = np.array([
+        0, 1, 3,
+        1, 2, 3,
+        0, 4, 1,
+        4, 5, 1,
+        1, 5, 2,
+        5, 6, 2,
+        2, 6, 3,
+        6, 7, 3,
+        3, 7, 0,
+        7, 4, 0,
+        4, 7, 5,
+        7, 6, 5,
+    ])
+
+    renderizador.add_geometry(GL_TRIANGLES, vertices, create_normals=True, index=index)
+
+    renderizador.render()

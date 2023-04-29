@@ -14,6 +14,7 @@ import contextlib, sys
 
 
 # Pacotes para o desenvolvimento do sistema
+import re
 from OpenGL.GL import *
 import glfw
 import numpy as np
@@ -31,7 +32,6 @@ import platform
    
 
 default_vertex_shader = r'''
-    #version 330 core
     layout (location = 0) in vec3 position;
     layout (location = 1) in vec3 normal;
     layout (location = 2) in vec3 color;
@@ -50,13 +50,12 @@ default_vertex_shader = r'''
 '''
 
 default_fragment_shader = r'''
-    #version 330 core
-    layout (location = 0) out vec4 FragColor;
+    layout (location = 0) out vec4 fragColor;
     in vec3 bNormal;
     in vec3 bColor;
     in vec2 bUV;
     void main() {
-        FragColor = vec4(bColor, 1.0f);
+        fragColor = vec4(bColor, 1.0f);
     }
 '''
 
@@ -65,7 +64,7 @@ vertices = np.array(
     [-1.0, -1.0, -1.0,
       1.0, -1.0, -1.0,
      -1.0,  1.0, -1.0,
-      1.0,  0.5, -1.0,
+      1.0,  1.0, -1.0,
     ], np.float32
 )
 
@@ -88,154 +87,6 @@ uvs = np.array(
 )
 
 
-# Vertices (forçando ser float32 para evitar que algum vire outro tipo)
-vertices = np.array([
-    -1.0,  1.0, -1.0,
-    -1.0,  1.0,  1.0,
-    1.0,  1.0,  1.0,
-    1.0,  1.0, -1.0,
-    -1.0, -1.0, -1.0,
-    -1.0, -1.0,  1.0,
-    1.0, -1.0,  1.0,
-    1.0, -1.0, -1.0,
-], np.float32)
-
-index = np.array([
-    0, 1, 3,
-    1, 2, 3,
-    0, 4, 1,
-    4, 5, 1,
-    1, 5, 2,
-    5, 6, 2,
-    2, 6, 3,
-    6, 7, 3,
-    3, 7, 0,
-    7, 4, 0,
-    4, 7, 5,
-    7, 6, 5,
-])
-
-
-def add_geometry(mode, vertices, normals=None, colors=None, uvs=None, create_normals=False, index=None):
-
-    data = []
-    
-    # Valores padrões (normal, cor)
-    normal = [0.0, 0.0, 1.0]
-    color = [1.0, 1.0, 1.0]
-    uv = [0.0 ,0.0]
-
-    if mode == GL_TRIANGLE_STRIP:
-        for f in range(0, len(vertices), 3):
-            
-            # identificando vértice
-            vertex = vertices[f:f+3]
-
-            # identificando normal
-            if normals is not None:
-                normal = normals[f:f+3]
-            elif create_normals and f < vertices.size - (2*3):
-                vertex1 = vertices[f+3:f+6]
-                vertex2 = vertices[f+6:f+9]
-                if f%6==0:
-                    normal = normalize(np.cross(vertex1 - vertex, vertex2 - vertex))
-                else:
-                    normal = normalize(np.cross(vertex2 - vertex, vertex1 - vertex))
-            
-            # identificando cor
-            if colors is not None:
-                color = colors[f:f+3]
-
-            # identificando coordenadas de textura
-            if uvs is not None:
-                uv = uvs[(f//3)*2:((f//3)*2)+2]
-            else:
-                # Deixa os UVs proporcionais a posição na tela
-                uv = np.array([(vertex[0]+1)/2, (vertex[1]+1)/2])
-
-            data.append(np.concatenate([vertex, normal, color, uv]))
-
-        count = vertices.size
-
-    if mode == GL_TRIANGLES:
-
-        if index is not None:
-            for f in range(len(index)):
-
-                # identificando vértice
-                vertex = vertices[index[f]*3:(index[f]*3)+3]
-
-                # identificando normal
-                if normals is not None:
-                    normal = normals[index[f+1]*3:(index[f+1]*3)+3]
-                elif create_normals:
-                    if f%3==0:
-                        vertex1 = vertices[(index[f+1]*3):(index[f+1]*3)+3]
-                        vertex2 = vertices[(index[f+2]*3):(index[f+2]*3)+3]
-                        normal = normalize(np.cross(vertex1 - vertex, vertex2 - vertex))
-                
-                # identificando cor
-                if colors is not None:
-                    color = colors[index[f]*3:(index[f]*3)+3]
-
-                # identificando coordenadas de textura
-                if uvs is not None:
-                    uv = uvs[(index[f]//3)*2:((index[f]//3)*2)+2]
-                else:
-                    # Deixa os UVs proporcionais a posição na tela
-                    uv = np.array([(vertex[0]+1)/2, (vertex[1]+1)/2])
-
-                data.append(np.concatenate([vertex, normal, color, uv]))
-
-        count = len(index)*3
-
-    print(data)
-    #data = np.array(data, np.float32).flatten()
-    data = np.array([j for i in data for j in i], np.float32)
-    #print(data)
-
-    # Cria o VBO (Vertex Buffer Object) para armazenar vértices
-    verticesVBO = arrays.vbo.VBO(data, usage='GL_STATIC_DRAW')
-    verticesVBO.create_buffers()
-
-    # Cria e ativa o VAO (Vertex Array Object) para gerenciar os VBOs
-    triangleVAO = glGenVertexArrays(1)
-    glBindVertexArray(triangleVAO)
-
-    # Ativa o VBO para o contexto atual
-    verticesVBO.bind()
-
-    # buffer data into OpenGL
-    verticesVBO.copy_data()
-
-    # Configuração para posição dos vértices
-    # Coloca no ID 0, vértices 3D, com um stride de 3*4 (3 vertices de float = 4)
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, (3+3+3+2) * 4, ctypes.c_void_p(0))
-    glEnableVertexAttribArray(0)
-
-    # Configuração para normal dos vértices
-    # Coloca no ID 1, vértices 3D, com um stride de 3*4 (3 vertices de float = 4) e um ofset de (3*4)
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, (3+3+3+2) * 4, ctypes.c_void_p(3 * 4))
-    glEnableVertexAttribArray(1)
-
-    # Configuração para cor dos vértices
-    # Coloca no ID 2, vértices 3D, com um stride de 3*4 (3 vertices de float = 4) e um ofset de (3*4)
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, (3+3+3+2) * 4, ctypes.c_void_p(6 * 4))
-    glEnableVertexAttribArray(2)
-
-    # Configuração para coordenadas uv de textura dos vértices
-    # Coloca no ID 3, vértices 3D, com um stride de 3*4 (3 vertices de float = 4) e um ofset de (3*4)
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, (3+3+3+2) * 4, ctypes.c_void_p(9 * 4))
-    glEnableVertexAttribArray(3)
-
-    # Desativa (unbind) o VBO
-    verticesVBO.unbind()
-
-    # Desativa (unbind) o VAO
-    glBindVertexArray(0)
-
-    return triangleVAO, count
-
 class Renderizador:
 
     # Define a cor de fundo da renderização
@@ -245,13 +96,10 @@ class Renderizador:
     # Define a cor de fundo da renderização
     def set_background_color(self, color):
         self.background_color = color
-
-
-
     
 
     # Cria a jenala de renderização
-    def __init__(self, resolution, near, far):
+    def __init__(self, resolution=(1024, 768), near=0.1, far=100):
 
         self.window = None
  
@@ -270,6 +118,13 @@ class Renderizador:
         self.camera = Camera("examine", self.resolution, near=self.near, far=self.far)
         Callbacks.camera  = self.camera
 
+        self.data = []
+        self.mode = None
+        self.count = 0
+
+        self.vertex_shader_source = default_vertex_shader
+        self.fragment_shader_source = default_fragment_shader
+        self.uniforms_source = {}
 
 
     @contextlib.contextmanager
@@ -282,12 +137,11 @@ class Renderizador:
             # Inicia e configura o glfw
             glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
             glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
-            glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, True)
+            glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+            #glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, True)
             # Chamada para Mac para suportar chamadas antigas (deprecated)
             if platform.system().lower() == 'darwin':
                 glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, GL_TRUE)
-
-            glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
 
             #self.window = glfw.create_window(500, 400, self.title, None, None)
             self.window = glfw.create_window(self.resolution[0], self.resolution[1], self.title, None, None)
@@ -299,9 +153,6 @@ class Renderizador:
             glfw.make_context_current(self.window)
 
             glfw.set_input_mode(self.window, glfw.STICKY_KEYS, True)
-            #glClearColor(0, 0, 0.4, 0)
-
-
 
             # Cria a janela principal e colocar no contexto atual
             Callbacks.resolution = self.resolution
@@ -314,15 +165,146 @@ class Renderizador:
             glfw.terminate()
 
 
+    def set_shaders(self, vertex_shader_source=None, fragment_shader_source=None, uniforms_source={}):
+
+        if vertex_shader_source is None:
+            self.vertex_shader_source = default_vertex_shader
+        else:
+            self.vertex_shader_source = vertex_shader_source
+
+        if fragment_shader_source is None:
+            self.fragment_shader_source = default_fragment_shader
+        else:
+            self.fragment_shader_source = fragment_shader_source
+
+        self.uniforms_source = uniforms_source
 
 
-    def render(self, vertex_shader_source=None, fragment_shader_source=None, uniforms_source={}):
+    def add_geometry(self, mode, vertices, normals=None, colors=None, uvs=None, create_normals=False, index=None):
 
-        if vertex_shader_source == None:
-            vertex_shader_source = default_vertex_shader
+        data = []
+        
+        # Valores padrões (normal, cor)
+        normal = np.array([0.0, 0.0, 1.0], np.float32)
+        color = np.array([1.0, 1.0, 1.0], np.float32)
+        uv = np.array([0.0 ,0.0], np.float32)
 
-        if fragment_shader_source == None:
-            fragment_shader_source = default_fragment_shader
+        if mode == GL_TRIANGLE_STRIP:
+            for f in range(0, len(vertices), 3):
+                
+                # identificando vértice
+                vertex = vertices[f:f+3]
+
+                # identificando normal
+                if normals is not None:
+                    normal = normals[f:f+3]
+                elif create_normals and f < vertices.size - (2*3):
+                    vertex1 = vertices[f+3:f+6]
+                    vertex2 = vertices[f+6:f+9]
+                    if f%6==0:
+                        normal = normalize(np.cross(vertex1 - vertex, vertex2 - vertex))
+                    else:
+                        normal = normalize(np.cross(vertex2 - vertex, vertex1 - vertex))
+                
+                # identificando cor
+                if colors is not None:
+                    color = colors[f:f+3]
+
+                # identificando coordenadas de textura
+                if uvs is not None:
+                    uv = uvs[(f//3)*2:((f//3)*2)+2]
+                else:
+                    # Deixa os UVs proporcionais a posição na tela
+                    uv = np.array([(vertex[0]+1)/2, (vertex[1]+1)/2])
+
+                data.append(np.concatenate([vertex, normal, color, uv]))
+
+            count = vertices.size
+
+        if mode == GL_TRIANGLES:
+
+            if index is not None:
+                for f in range(len(index)):
+
+                    # identificando vértice
+                    vertex = vertices[index[f]*3:(index[f]*3)+3]
+
+                    # identificando normal
+                    if normals is not None:
+                        normal = normals[index[f+1]*3:(index[f+1]*3)+3]
+                    elif create_normals:
+                        if f%3==0:
+                            vertex1 = vertices[(index[f+1]*3):(index[f+1]*3)+3]
+                            vertex2 = vertices[(index[f+2]*3):(index[f+2]*3)+3]
+                            normal = normalize(np.cross(vertex1 - vertex, vertex2 - vertex))
+                    
+                    # identificando cor
+                    if colors is not None:
+                        color = colors[index[f]*3:(index[f]*3)+3]
+
+                    # identificando coordenadas de textura
+                    if uvs is not None:
+                        uv = uvs[(index[f]//3)*2:((index[f]//3)*2)+2]
+                    else:
+                        # Deixa os UVs proporcionais a posição na tela
+                        uv = np.array([(vertex[0]+1)/2, (vertex[1]+1)/2])
+
+                    data.append(np.concatenate([vertex, normal, color, uv]))
+
+            count = len(index)*3
+
+        self.data = np.array(data, np.float32).flatten()
+        self.mode = mode
+        self.count = count
+        #data = np.array([j for i in data for j in i], np.float32)
+
+    def parse_geometry(self):
+
+        # Cria o VBO (Vertex Buffer Object) para armazenar vértices
+        verticesVBO = arrays.vbo.VBO(self.data, usage='GL_STATIC_DRAW')
+        verticesVBO.create_buffers()
+
+        # Cria e ativa o VAO (Vertex Array Object) para gerenciar os VBOs
+        triangleVAO = glGenVertexArrays(1)
+        glBindVertexArray(triangleVAO)
+
+        # Ativa o VBO para o contexto atual
+        verticesVBO.bind()
+
+        # buffer data into OpenGL
+        verticesVBO.copy_data()
+
+        # Configuração para posição dos vértices
+        # Coloca no ID 0, vértices 3D, com um stride de 3*4 (3 vertices de float = 4)
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, (3+3+3+2) * 4, ctypes.c_void_p(0))
+        glEnableVertexAttribArray(0)
+
+        # Configuração para normal dos vértices
+        # Coloca no ID 1, vértices 3D, com um stride de 3*4 (3 vertices de float = 4) e um ofset de (3*4)
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, (3+3+3+2) * 4, ctypes.c_void_p(3 * 4))
+        glEnableVertexAttribArray(1)
+
+        # Configuração para cor dos vértices
+        # Coloca no ID 2, vértices 3D, com um stride de 3*4 (3 vertices de float = 4) e um ofset de (3*4)
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, (3+3+3+2) * 4, ctypes.c_void_p(6 * 4))
+        glEnableVertexAttribArray(2)
+
+        # Configuração para coordenadas uv de textura dos vértices
+        # Coloca no ID 3, vértices 3D, com um stride de 3*4 (3 vertices de float = 4) e um ofset de (3*4)
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, (3+3+3+2) * 4, ctypes.c_void_p(9 * 4))
+        glEnableVertexAttribArray(3)
+
+        # Desativa (unbind) o VBO
+        verticesVBO.unbind()
+
+        # Desativa (unbind) o VAO
+        glBindVertexArray(0)
+
+        return triangleVAO, self.count
+
+
+    def render(self):
+
 
         with self.create_main_window() as window:
 
@@ -352,20 +334,36 @@ class Renderizador:
             # Ativa o Z-Buffer
             glEnable(GL_DEPTH_TEST)
 
+            if self.mode is None:
+                self.add_geometry(GL_TRIANGLE_STRIP, vertices, colors=colors, uvs=uvs, create_normals=True)
 
+            vao, count  = self.parse_geometry()
 
-            #########
-            mode = GL_TRIANGLE_STRIP
-            vao, count  = add_geometry(GL_TRIANGLE_STRIP, vertices, colors=colors, uvs=uvs, create_normals=True)
+            # Adiciona os parâmetros automaticamente do Shader Toy
+            shadertoy_vertex = "#version 330 core\n"
+            self.vertex_shader_source = shadertoy_vertex + str(self.vertex_shader_source)
 
-            #mode = GL_TRIANGLES
-            #vao, count = set_geometry()
-            #vao, count  = add_geometry(GL_TRIANGLES, vertices, create_normals=True, index=index)
+            Renderizador.shadertoy_frag = "uniform vec2 iResolution;uniform float iTime;\n"
+            def mainImage(match):
+                signature = str(match.group())
+                signature = re.search(r'\((.*?)\)',signature).group(1)
+                result = [x.strip() for x in signature.split(',')]
+                
+                for r in result:
+                    txt = r.split()
+                    if txt[0] == "out":
+                        Renderizador.shadertoy_frag += f"out vec4 {txt[2]};\n"
+                    elif txt[0] == "in":
+                        Renderizador.shadertoy_frag += f"in vec4 gl_FragCoord;vec2 {txt[2]} = gl_FragCoord.xy;\n"
+                return "void main(){\n"
+            
+            self.fragment_shader_source = re.sub("void\s*mainImage\(([^\)]+)\)\s*\{", mainImage, self.fragment_shader_source)
+            self.fragment_shader_source = "#version 330 core\n" + Renderizador.shadertoy_frag + self.fragment_shader_source
 
 
             # Compila os shaders
-            vertexShader_id = compile_shader(GL_VERTEX_SHADER, vertex_shader_source)
-            fragmentShader_id = compile_shader(GL_FRAGMENT_SHADER, fragment_shader_source)
+            vertexShader_id = compile_shader(GL_VERTEX_SHADER, self.vertex_shader_source)
+            fragmentShader_id = compile_shader(GL_FRAGMENT_SHADER, self.fragment_shader_source)
 
             # Conecta (link) os shaders para a aplicação
             program_id = link_shader(vertexShader_id, fragmentShader_id)
@@ -379,7 +377,7 @@ class Renderizador:
             uniforms["iTime"] = glGetUniformLocation(program_id, 'iTime')
 
             # Cadastra os Uniforms
-            for field in uniforms_source:
+            for field in self.uniforms_source:
                 uniforms[field] = glGetUniformLocation(program_id, field)    
 
             # remove os shaders da memória
@@ -411,16 +409,16 @@ class Renderizador:
                 glUniform2f(uniforms["iResolution"], Callbacks.resolution[0], Callbacks.resolution[1])
                 glUniform1f(uniforms["iTime"], passed_time)
 
-                parse_uniforms(uniforms_source, uniforms)
+                parse_uniforms(self.uniforms_source, uniforms)
 
                 # Ativa (bind) VAO
-                glBindVertexArray(vao)  #LIGAR
+                glBindVertexArray(vao)
 
                 # Desenha os vértices como triângulos
-                glDrawArrays(mode, 0, count)  #LIGAR
+                glDrawArrays(self.mode, 0, self.count)
                 
                 # Desativa (unbind) o VAO
-                glBindVertexArray(0)  #LIGAR
+                glBindVertexArray(0)
 
                 # Detecta e armazena as chamadas de teclado
                 keyPressed = np.where(Callbacks.keyArray == True)
