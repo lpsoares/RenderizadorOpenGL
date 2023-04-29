@@ -23,7 +23,7 @@ class Callbacks:
     cursor_position = (0, 0)
 
     # stores which keys are pressed and handle key press in the main loop
-    keyArray = np.array([False] * 300, bool)
+    keyArray = np.array([False] * 640, bool)
 
     # Os callbacks usam muito a Camera, então deixei uma ligação aqui
     camera = None
@@ -46,10 +46,10 @@ class Callbacks:
 
     # Caso as dimensões da janela principal sejam alteradas 
     def framebuffer_size_callback(window, width, height):
-        width=300
-        height = 200
         Callbacks.window_size = (width, height)
         #glViewport(0, 0, width, height)
+        # TALVEZ
+        #void glfwSetWindowSize	(	GLFWwindow * 	window,int 	width,int 	height )	
 
 
     # Para eventos de teclado
@@ -65,6 +65,18 @@ class Callbacks:
                 Callbacks.keyArray[key] = True
         elif action == glfw.RELEASE:
             Callbacks.keyArray[key] = False
+
+    def mouse_button_callback(window, button, action, mods):
+        if button == glfw.MOUSE_BUTTON_RIGHT:
+            print("MOUSE_BUTTON_RIGHT")
+
+        if action == glfw.PRESS:
+            print("PRESS")
+        if action == glfw.RELEASE:
+            print("RELEASE")
+
+        if mods == glfw.MOD_NUM_LOCK:
+            print("MOD_NUM_LOCK")
 
 
     # Usado para exibir mensagens do OpenGL

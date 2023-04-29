@@ -17,8 +17,6 @@ from renderizador.transformations import *
 
 # https://www.shadertoy.com/view/4tcGDr
 fragment_shader_source = r'''
-    layout (location = 0) out vec4 fragColor;
-
     /**
     * Part 6 Challenges:
     * - Make a scene of your own! Try to use the rotation transforms, the CSG primitives,
@@ -316,7 +314,8 @@ fragment_shader_source = r'''
         return mat3(s, u, -f);
     }
 
-    void main()
+
+    void mainImage( out vec4 fragColor, in vec2 fragCoord )
     {
         vec3 viewDir = rayDirection(45.0, iResolution.xy, fragCoord);
         vec3 eye = vec3(8.0, 5.0 * sin(0.2 * iTime), 7.0);

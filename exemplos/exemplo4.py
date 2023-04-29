@@ -21,7 +21,7 @@ if __name__ == '__main__':
     renderizador = Renderizador(resolution=(1280, 720))
    
     #with open('silexars.frag') as file:
-    with open('mandelbulb.frag') as file:
+    with open('mouse.frag') as file:
         text = file.read()
 
     # Passando Shaders e renderizando cena

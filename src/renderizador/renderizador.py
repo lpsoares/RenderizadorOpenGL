@@ -103,9 +103,9 @@ class Renderizador:
 
         self.window = None
  
-        self.resolution = (600, 400)
-        self.near = 0.1
-        self.far = 100
+        self.resolution = resolution
+        self.near = near
+        self.far = far
 
         # Cor padrão para o fundo da janela (para apagar o buffer de cores)
         self.background_color = (0.0, 0.0, 0.0, 1.0)
@@ -145,6 +145,8 @@ class Renderizador:
 
             #self.window = glfw.create_window(500, 400, self.title, None, None)
             self.window = glfw.create_window(self.resolution[0], self.resolution[1], self.title, None, None)
+            #print("CRIA"+str(self.resolution[0]), str(self.resolution[1]))
+
 
             if not self.window:
                 glfw.terminate()
@@ -152,7 +154,7 @@ class Renderizador:
                 #sys.exit(2)
             glfw.make_context_current(self.window)
 
-            glfw.set_input_mode(self.window, glfw.STICKY_KEYS, True)
+            #glfw.set_input_mode(self.window, glfw.STICKY_KEYS, True)
 
             # Cria a janela principal e colocar no contexto atual
             Callbacks.resolution = self.resolution
@@ -260,6 +262,9 @@ class Renderizador:
 
     def parse_geometry(self):
 
+        #width, height = glfw.get_window_size(self.window)
+        #print(width, height)
+
         # Cria o VBO (Vertex Buffer Object) para armazenar vértices
         verticesVBO = arrays.vbo.VBO(self.data, usage='GL_STATIC_DRAW')
         verticesVBO.create_buffers()
@@ -327,9 +332,10 @@ class Renderizador:
             glfw.set_key_callback(self.window, Callbacks.key_callback)
             glfw.set_cursor_pos_callback(self.window, Callbacks.cursor_pos_callback)
             glfw.set_scroll_callback(self.window, Callbacks.scroll_callback)
+            glfw.set_mouse_button_callback(self.window, Callbacks.mouse_button_callback)
 
             # desativa a apresentação do cursor
-            glfw.set_input_mode(self.window, glfw.CURSOR, glfw.CURSOR_DISABLED)
+            #glfw.set_input_mode(self.window, glfw.CURSOR, glfw.CURSOR_DISABLED)
 
             # Ativa o Z-Buffer
             glEnable(GL_DEPTH_TEST)
@@ -343,7 +349,10 @@ class Renderizador:
             shadertoy_vertex = "#version 330 core\n"
             self.vertex_shader_source = shadertoy_vertex + str(self.vertex_shader_source)
 
-            Renderizador.shadertoy_frag = "uniform vec2 iResolution;uniform float iTime;\n"
+            Renderizador.shadertoy_frag = "uniform vec2 iResolution;"+ \
+                                          "uniform float iTime;"+ \
+                                          "uniform vec4 iMouse;\n"
+            
             def mainImage(match):
                 signature = str(match.group())
                 signature = re.search(r'\((.*?)\)',signature).group(1)
@@ -360,6 +369,7 @@ class Renderizador:
             self.fragment_shader_source = re.sub("void\s*mainImage\(([^\)]+)\)\s*\{", mainImage, self.fragment_shader_source)
             self.fragment_shader_source = "#version 330 core\n" + Renderizador.shadertoy_frag + self.fragment_shader_source
 
+            # print(self.fragment_shader_source)
 
             # Compila os shaders
             vertexShader_id = compile_shader(GL_VERTEX_SHADER, self.vertex_shader_source)
@@ -375,6 +385,7 @@ class Renderizador:
             # Cadastra os Uniforms básicos do ShaderToy
             uniforms["iResolution"] = glGetUniformLocation(program_id, 'iResolution')
             uniforms["iTime"] = glGetUniformLocation(program_id, 'iTime')
+            uniforms["iMouse"] = glGetUniformLocation(program_id, 'iMouse')
 
             # Cadastra os Uniforms
             for field in self.uniforms_source:
@@ -406,8 +417,15 @@ class Renderizador:
                 passed_time = glfw.get_time()  # returna o tempo passado desde que a aplicação começou
 
                 # Fazendo os uniforms básicos do ShaderToy
-                glUniform2f(uniforms["iResolution"], Callbacks.resolution[0], Callbacks.resolution[1])
+                width, height = glfw.get_framebuffer_size(self.window)
+                glUniform2f(uniforms["iResolution"], width, height)
+                
                 glUniform1f(uniforms["iTime"], passed_time)
+
+                mag = width/Callbacks.resolution[0]
+                posx, posy = glfw.get_cursor_pos(self.window)
+                glUniform4f(uniforms["iMouse"], posx*mag, height-posy*mag, 1, 1)
+                
 
                 parse_uniforms(self.uniforms_source, uniforms)
 
