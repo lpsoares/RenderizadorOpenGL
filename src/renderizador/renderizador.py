@@ -9,11 +9,8 @@ Disciplina: Computação Gráfica
 Data: 23 de Abril de 2023
 """
 
-
-import contextlib, sys
-
-
 # Pacotes para o desenvolvimento do sistema
+import contextlib
 import re
 from OpenGL.GL import *
 import glfw
@@ -127,6 +124,7 @@ class Renderizador:
         self.uniforms_source = {}
 
         self.shader_toy = True
+        self.shader_toy_mIsLowEnd = True  # Muda o parâmetro para HW_PERFORMANCE
 
     @contextlib.contextmanager
     def create_main_window(self):
@@ -357,12 +355,17 @@ class Renderizador:
                 shadertoy_vertex = "#version 330 core\n"
                 self.vertex_shader_source = shadertoy_vertex + self.vertex_shader_source
 
-                Renderizador.shadertoy_frag = "uniform vec2 iResolution;"+ \
-                                              "uniform float iTime;"+ \
-                                              "uniform float iTimeDelta;"+ \
-                                              "uniform float iFrameRate;"+ \
-                                              "uniform uint iFrame;"+ \
-                                              "uniform vec4 iMouse;\n"
+                Renderizador.shadertoy_frag = f"#define HW_PERFORMANCE {0 if self.shader_toy_mIsLowEnd else 1}\n"
+                Renderizador.shadertoy_frag += "uniform vec2 iResolution;"+ \
+                                               "uniform float iTime;"+ \
+                                               "uniform float iTimeDelta;"+ \
+                                               "uniform float iFrameRate;"+ \
+                                               "uniform uint iFrame;"+ \
+                                               "uniform vec4 iMouse;\n"
+                                            #    "uniform float iChannelTime[4];"
+                                            #    "uniform vec4 iDate;"
+                                            #    "uniform float iSampleRate;"
+                                            #    "uniform vec3 iChannelResolution[4];"
             
                 def mainImage(match):
                     signature = str(match.group())
@@ -418,6 +421,9 @@ class Renderizador:
             # Define no contexto qual a cor para limpar o buffer de cores
             glClearColor(*self.background_color)
 
+            # Passa para o Callbacks o real tamanho do Framebuffer
+            width, height = glfw.get_framebuffer_size(window)
+            Callbacks.framebuffer_size = [width, height]
 
             # Realiza a renderização enquanto a janela não for fechada
             while (
@@ -447,13 +453,12 @@ class Renderizador:
                     else:        
                         count_frames += 1 
 
-                    width, height = glfw.get_framebuffer_size(self.window)
-                    glUniform2f(uniforms["iResolution"], width, height)
+                    glUniform2f(uniforms["iResolution"], Callbacks.framebuffer_size[0], Callbacks.framebuffer_size[1])
                     glUniform1f(uniforms["iTime"], passed_time)
                     glUniform1f(uniforms["iTimeDelta"], time_delta)
                     glUniform1f(uniforms["iFrameRate"], fps)
                     glUniform1ui(uniforms["iFrame"], frame)
-                    glUniform4fv(uniforms["iMouse"], 1, Callbacks.get_mouse_clicked(width, height))
+                    glUniform4fv(uniforms["iMouse"], 1, Callbacks.get_mouse_clicked())
                     
                 parse_uniforms(self.uniforms_source, uniforms)
 

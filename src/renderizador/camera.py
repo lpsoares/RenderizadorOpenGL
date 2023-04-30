@@ -103,7 +103,7 @@ class Camera:
     def orbit(self, offset):
 
         # Calculando as rotações horizontal e vertical
-        qx = Quaternion(axis=np.cross(self.eye-self.at, self.up), angle=offset[1]*self.mouse_speed)
+        qx = Quaternion(axis=np.cross(self.eye-self.at, self.up), angle=-offset[1]*self.mouse_speed)
         qy = Quaternion(axis=-self.up, angle=offset[0]*self.mouse_speed)
 
         # Integrando e aplicando a manipulação

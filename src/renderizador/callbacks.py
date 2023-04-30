@@ -29,7 +29,8 @@ class Callbacks:
     camera = None
 
     # Tamanho padrão de resolução da tela
-    resolution = (1024, 768)
+    resolution = [1024, 768]
+    framebuffer_size = [1024, 768]
 
     # Se mouse foi clicado
     mouse_clicked = False
@@ -39,6 +40,7 @@ class Callbacks:
 
     # Para eventos de movimento do mouse
     def cursor_pos_callback(window, xpos, ypos):
+        ypos = Callbacks.framebuffer_size[1] - ypos
         offset = [xpos - Callbacks.cursor_position[0],
                   ypos - Callbacks.cursor_position[1]]
         Callbacks.camera.send_mouse(offset)
@@ -53,6 +55,8 @@ class Callbacks:
     # Caso as dimensões da janela principal sejam alteradas 
     def framebuffer_size_callback(window, width, height):
         Callbacks.window_size = (width, height)
+        width, height = glfw.get_framebuffer_size(window)
+        Callbacks.framebuffer_size = [width, height]
         #glViewport(0, 0, width, height)
         # TALVEZ
         #void glfwSetWindowSize	(	GLFWwindow * 	window,int 	width,int 	height )	
@@ -72,7 +76,10 @@ class Callbacks:
         elif action == glfw.RELEASE:
             Callbacks.keyArray[key] = False
 
-    def get_mouse_clicked(width, height):
+    def get_mouse_clicked():
+
+        width = Callbacks.framebuffer_size[0]
+        height = Callbacks.framebuffer_size[1]
 
         mag = width/Callbacks.resolution[0]
 
@@ -81,13 +88,13 @@ class Callbacks:
         
         pos_clicked = np.array(Callbacks.mouse_pos_clicked)
         pos_clicked *= int(mag)
-        pos_clicked[1] = height - pos_clicked[1]
+        #pos_clicked[1] = height - pos_clicked[1]
         pos_clicked[0] = max(0, min(pos_clicked[0], width))
         pos_clicked[1] = max(0, min(pos_clicked[1], height))
 
         pos_down = np.array(Callbacks.mouse_pos_down)
         pos_down *= int(mag)
-        pos_down[1] = height - pos_down[1]
+        #pos_down[1] = height - pos_down[1]
         pos_down[0] = max(0, min(pos_down[0], width))
         pos_down[1] = max(0, min(pos_down[1], height))
 
@@ -99,6 +106,7 @@ class Callbacks:
         if not Callbacks.mouse_pressed:
             pos_clicked[0] = -pos_clicked[0]
 
+        
         return [pos_down[0], pos_down[1], pos_clicked[0], pos_clicked[1]]
 
     def mouse_button_callback(window, button, action, mods):
