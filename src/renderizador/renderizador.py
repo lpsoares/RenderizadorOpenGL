@@ -126,6 +126,7 @@ class Renderizador:
         self.fragment_shader_source = default_fragment_shader
         self.uniforms_source = {}
 
+        self.shader_toy = True
 
     @contextlib.contextmanager
     def create_main_window(self):
@@ -345,31 +346,40 @@ class Renderizador:
 
             vao, count  = self.parse_geometry()
 
-            # Adiciona os parâmetros automaticamente do Shader Toy
-            shadertoy_vertex = "#version 330 core\n"
-            self.vertex_shader_source = shadertoy_vertex + str(self.vertex_shader_source)
+            self.vertex_shader_source = str(self.vertex_shader_source)
 
-            Renderizador.shadertoy_frag = "uniform vec2 iResolution;"+ \
-                                          "uniform float iTime;"+ \
-                                          "uniform vec4 iMouse;\n"
-            
-            def mainImage(match):
-                signature = str(match.group())
-                signature = re.search(r'\((.*?)\)',signature).group(1)
-                result = [x.strip() for x in signature.split(',')]
-                
-                for r in result:
-                    txt = r.split()
-                    if txt[0] == "out":
-                        Renderizador.shadertoy_frag += f"out vec4 {txt[2]};\n"
-                    elif txt[0] == "in":
-                        Renderizador.shadertoy_frag += f"in vec4 gl_FragCoord;vec2 {txt[2]} = gl_FragCoord.xy;\n"
-                return "void main(){\n"
-            
-            self.fragment_shader_source = re.sub("void\s*mainImage\(([^\)]+)\)\s*\{", mainImage, self.fragment_shader_source)
-            self.fragment_shader_source = "#version 330 core\n" + Renderizador.shadertoy_frag + self.fragment_shader_source
+            # Configura os Uniforms para os shaders
+            uniforms = {}
 
-            # print(self.fragment_shader_source)
+            # Caso os parâmetros do Shader Toy estejam habilidatos
+            if self.shader_toy:
+                # Adiciona os parâmetros automaticamente do Shader Toy
+                shadertoy_vertex = "#version 330 core\n"
+                self.vertex_shader_source = shadertoy_vertex + self.vertex_shader_source
+
+                Renderizador.shadertoy_frag = "uniform vec2 iResolution;"+ \
+                                              "uniform float iTime;"+ \
+                                              "uniform float iTimeDelta;"+ \
+                                              "uniform float iFrameRate;"+ \
+                                              "uniform uint iFrame;"+ \
+                                              "uniform vec4 iMouse;\n"
+            
+                def mainImage(match):
+                    signature = str(match.group())
+                    signature = re.search(r'\((.*?)\)',signature).group(1)
+                    result = [x.strip() for x in signature.split(',')]
+                    
+                    for r in result:
+                        txt = r.split()
+                        if txt[0] == "out":
+                            Renderizador.shadertoy_frag += f"out vec4 {txt[2]};\n"
+                        elif txt[0] == "in":
+                            Renderizador.shadertoy_frag += f"in vec4 gl_FragCoord;vec2 {txt[2]} = gl_FragCoord.xy;\n"
+                    return "void main(){\n"
+            
+                self.fragment_shader_source = re.sub("void\s*mainImage\(([^\)]+)\)\s*\{", mainImage, self.fragment_shader_source)
+                self.fragment_shader_source = "#version 330 core\n" + Renderizador.shadertoy_frag + self.fragment_shader_source
+                       
 
             # Compila os shaders
             vertexShader_id = compile_shader(GL_VERTEX_SHADER, self.vertex_shader_source)
@@ -377,15 +387,25 @@ class Renderizador:
 
             # Conecta (link) os shaders para a aplicação
             program_id = link_shader(vertexShader_id, fragmentShader_id)
-            
-            # Configura os Uniforms para os shaders
-            uniforms = {}
 
+            # Caso os parâmetros do Shader Toy estejam habilidatos
+            if self.shader_toy:
 
-            # Cadastra os Uniforms básicos do ShaderToy
-            uniforms["iResolution"] = glGetUniformLocation(program_id, 'iResolution')
-            uniforms["iTime"] = glGetUniformLocation(program_id, 'iTime')
-            uniforms["iMouse"] = glGetUniformLocation(program_id, 'iMouse')
+                # Cadastra os Uniforms básicos do ShaderToy
+                uniforms["iResolution"] = glGetUniformLocation(program_id, 'iResolution')
+                uniforms["iTime"] = glGetUniformLocation(program_id, 'iTime')
+                uniforms["iTimeDelta"] = glGetUniformLocation(program_id, 'iTimeDelta')
+                uniforms["iFrameRate"] = glGetUniformLocation(program_id, 'iFrameRate')
+                uniforms["iFrame"] = glGetUniformLocation(program_id, 'iFrame')
+                uniforms["iMouse"] = glGetUniformLocation(program_id, 'iMouse')
+
+                # recursos usados para detectar valores do Shader Toy
+                frame = 0
+                time_delta = 0
+                passed_time = 0
+                count_second = 0
+                count_frames = 0
+                fps = 0
 
             # Cadastra os Uniforms
             for field in self.uniforms_source:
@@ -400,8 +420,6 @@ class Renderizador:
 
 
             # Realiza a renderização enquanto a janela não for fechada
-            #while not glfw.window_should_close(self.window):
-
             while (
                 glfw.get_key(window, glfw.KEY_ESCAPE) != glfw.PRESS and
                 not glfw.window_should_close(self.window)
@@ -414,14 +432,29 @@ class Renderizador:
                 # use our own rendering program
                 glUseProgram(program_id)
 
-                passed_time = glfw.get_time()  # returna o tempo passado desde que a aplicação começou
 
+            
                 # Fazendo os uniforms básicos do ShaderToy
-                width, height = glfw.get_framebuffer_size(self.window)
-                glUniform2f(uniforms["iResolution"], width, height)
-                glUniform1f(uniforms["iTime"], passed_time)
-                glUniform4fv(uniforms["iMouse"], 1, Callbacks.get_mouse_clicked(width, height))
-                
+                if self.shader_toy:
+
+                    tmp_passed_time = glfw.get_time()  # returna o tempo passado desde que a aplicação começou
+                    time_delta = tmp_passed_time - passed_time
+                    passed_time = tmp_passed_time
+                    if passed_time - count_second > 1.0:
+                        fps = count_frames / (passed_time - count_second)
+                        count_second = passed_time
+                        count_frames = 0
+                    else:        
+                        count_frames += 1 
+
+                    width, height = glfw.get_framebuffer_size(self.window)
+                    glUniform2f(uniforms["iResolution"], width, height)
+                    glUniform1f(uniforms["iTime"], passed_time)
+                    glUniform1f(uniforms["iTimeDelta"], time_delta)
+                    glUniform1f(uniforms["iFrameRate"], fps)
+                    glUniform1ui(uniforms["iFrame"], frame)
+                    glUniform4fv(uniforms["iMouse"], 1, Callbacks.get_mouse_clicked(width, height))
+                    
                 parse_uniforms(self.uniforms_source, uniforms)
 
                 # Ativa (bind) VAO
@@ -438,7 +471,10 @@ class Renderizador:
                 for key in keyPressed[0]:
                     self.camera.send_keys(key)
 
-                # captura e processa eventos da janela
+                # Aumenta em um no contador de frames
+                frame += 1
+
+                # Captura e processa eventos da janela
                 glfw.poll_events()
 
                 # Faz a troca dos framebuffer (swap frame buffer)
