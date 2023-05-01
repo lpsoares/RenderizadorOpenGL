@@ -21,16 +21,11 @@ fragment_shader_source = r'''
     
     // Normalized pixel coordinates (from 0 to 1)
     vec2 uv = fragCoord/iResolution.xy;
-    if(uv.x > 0.5) {
-        fragColor = vec4(1.0,0.0,0.0,1.0);
-    } else {
-        fragColor = vec4(1.0);
-    }
 
-    //vec3 col = 0.5 + 0.5*cos(iTime+uv.xyx+vec3(0,2,4));
+    vec3 col = 0.5 + 0.5*cos(iTime+uv.xyx+vec3(0,2,4));
 
     // Output to screen
-    //fragColor = vec4(col,1.0);
+    fragColor = vec4(col,1.0);
 }
 
 '''
