@@ -54,12 +54,10 @@ class Callbacks:
 
     # Caso as dimensões da janela principal sejam alteradas 
     def framebuffer_size_callback(window, width, height):
-        Callbacks.window_size = (width, height)
+        Callbacks.window_size = [width, height]
         width, height = glfw.get_framebuffer_size(window)
         Callbacks.framebuffer_size = [width, height]
-        #glViewport(0, 0, width, height)
-        # TALVEZ
-        #void glfwSetWindowSize	(	GLFWwindow * 	window,int 	width,int 	height )	
+        glViewport(0, 0, width, height)
 
 
     # Para eventos de teclado

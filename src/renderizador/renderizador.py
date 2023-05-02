@@ -321,23 +321,15 @@ class Renderizador:
                 glEnable(GL_DEBUG_OUTPUT)
                 glDebugMessageCallback(GLDEBUGPROC(Callbacks.debug_message_callback), None)
 
-
-
             # inicializa a posição do cursor
             Callbacks.cursor_position = glfw.get_cursor_pos(self.window)
 
             # Define o callback para caso a janela seja redimensionada, teclas pressionadas ou movimento do mouse
-            glfw.set_framebuffer_size_callback(self.window, Callbacks.framebuffer_size_callback)
             glfw.set_key_callback(self.window, Callbacks.key_callback)
             glfw.set_cursor_pos_callback(self.window, Callbacks.cursor_pos_callback)
             glfw.set_scroll_callback(self.window, Callbacks.scroll_callback)
             glfw.set_mouse_button_callback(self.window, Callbacks.mouse_button_callback)
 
-            # desativa a apresentação do cursor
-            #glfw.set_input_mode(self.window, glfw.CURSOR, glfw.CURSOR_DISABLED)
-
-            # Ativa o Z-Buffer
-            glEnable(GL_DEPTH_TEST)
 
             if self.mode is None:
                 self.add_geometry(GL_TRIANGLE_STRIP, vertices, colors=colors, uvs=uvs, create_normals=True)
@@ -424,6 +416,16 @@ class Renderizador:
             # Passa para o Callbacks o real tamanho do Framebuffer
             width, height = glfw.get_framebuffer_size(window)
             Callbacks.framebuffer_size = [width, height]
+
+            # desativa a apresentação do cursor
+            #glfw.set_input_mode(self.window, glfw.CURSOR, glfw.CURSOR_DISABLED)
+
+            # Ativa o Z-Buffer
+            glEnable(GL_DEPTH_TEST)
+
+            # Call back do resize do Framebuffer precisa ser configurado no final do processo de iniciação
+            glfw.set_framebuffer_size_callback(self.window, Callbacks.framebuffer_size_callback)
+
 
             # Realiza a renderização enquanto a janela não for fechada
             while (
