@@ -418,7 +418,7 @@ class Renderizador:
             Callbacks.framebuffer_size = [width, height]
 
             # desativa a apresentação do cursor
-            #glfw.set_input_mode(self.window, glfw.CURSOR, glfw.CURSOR_DISABLED)
+            glfw.set_input_mode(self.window, glfw.CURSOR, glfw.CURSOR_DISABLED)
 
             # Ativa o Z-Buffer
             glEnable(GL_DEPTH_TEST)
