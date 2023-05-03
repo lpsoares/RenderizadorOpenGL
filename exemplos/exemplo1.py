@@ -87,16 +87,20 @@ if __name__ == '__main__':
 
 
     # Criando renderizador
-    renderizador = Renderizador(resolution=(1024, 768), near=0.1, far=100.0, lock_mouse=False)
+    renderizador = Renderizador(resolution=(1024, 768), lock_mouse=False)
+    
+    # Criando câmera
+    camera = Camera(type="examine", near=0.1, far=100, eye=[0.0, 0.0, 10.0])
+    Callbacks.camera  = camera  # Isso está ruim, melhorar
 
     # Configura os Uniforms dos Shaders
     uniforms = {}
 
     # Configurações de Câmera
-    uniforms["projection"] = renderizador.camera.get_projection_matrix
-    uniforms["view"] = renderizador.camera.get_view_matrix
+    uniforms["projection"] = camera.get_projection_matrix
+    uniforms["view"] = camera.get_view_matrix
     uniforms["model"] = translate(0, 0, 0) @ rotate([0.0, 0.0, 1.0], 0.0) @ scale(1.0, 1.0, 1.0)
-    uniforms["view_position"] = renderizador.camera.get_eye
+    uniforms["view_position"] = camera.get_eye
 
     # Configurações de Materiais e Iluminação
     uniforms["light_color"] = [1.0, 1.0, 1.0]

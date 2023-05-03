@@ -17,6 +17,8 @@ import re
 from OpenGL.GL import *
 import glfw
 import numpy as np
+import time
+
 
 
 # Diversos includes para o projeto do Renderizador OpenGL
@@ -98,13 +100,13 @@ class Renderizador:
     
 
     # Cria a jenala de renderização
-    def __init__(self, resolution=(1024, 768), near=0.1, far=100, lock_mouse=False):
+    def __init__(self, resolution=(1024, 768), lock_mouse=False):
 
         self.window = None
  
-        self.resolution = resolution
-        self.near = near
-        self.far = far
+        Callbacks.resolution = resolution
+        # self.near = near
+        # self.far = far
 
         # Faz o mouse não aparecer e ficar preso no meio da tela
         self.lock_mouse = lock_mouse
@@ -117,8 +119,8 @@ class Renderizador:
        
         # Cria recursos de manipulação de câmera
         #self.camera = Camera("fly", resolution, near=near, far=far)
-        self.camera = Camera("examine", self.resolution, near=self.near, far=self.far)
-        Callbacks.camera  = self.camera
+        #self.camera = Camera("examine", Callbacks.resolution, near=near, far=far)
+        #Callbacks.camera  = self.camera
 
         self.data = []
         self.mode = None
@@ -150,7 +152,7 @@ class Renderizador:
             if platform.system().lower() == 'darwin':
                 glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, GL_TRUE)
 
-            self.window = glfw.create_window(self.resolution[0], self.resolution[1], self.title, None, None)
+            self.window = glfw.create_window(Callbacks.resolution[0], Callbacks.resolution[1], self.title, None, None)
 
             if not self.window:
                 glfw.terminate()
@@ -161,7 +163,7 @@ class Renderizador:
             #glfw.set_input_mode(self.window, glfw.STICKY_KEYS, True)
 
             # Cria a janela principal e colocar no contexto atual
-            Callbacks.resolution = self.resolution
+            #Callbacks.resolution = self.resolution
                 
             #glfw.set_window_pos(window, 0, 0) # define a posição da janela
 
@@ -379,12 +381,14 @@ class Renderizador:
             imgui.same_line();
             imgui.text(f"   {self.time:.2f}  ")
             imgui.same_line();
-            imgui.text(f"  {self.resolution[0]} x {self.resolution[1]}  ")
+            imgui.text(f"  {Callbacks.resolution[0]} x {Callbacks.resolution[1]}  ")
+            imgui.same_line();
+            if imgui.button('[]'):
+                if glfw.get_window_attrib(self.window, glfw.MAXIMIZED):
+                    glfw.restore_window(self.window)
+                else:
+                    glfw.maximize_window(self.window)
 
-            
-
-            
-        
 
     def render(self):
 
@@ -572,7 +576,7 @@ class Renderizador:
                 # Detecta e armazena as chamadas de teclado
                 keyPressed = np.where(Callbacks.keyArray == True)
                 for key in keyPressed[0]:
-                    self.camera.send_keys(key)
+                    Callbacks.camera.send_keys(key)
 
                 # Aumenta em um no contador de frames
                 frame += 1
@@ -582,6 +586,9 @@ class Renderizador:
 
                 # Faz a troca dos framebuffer (swap frame buffer)
                 glfw.swap_buffers(self.window)
+
+                time.sleep(0.01)
+
 
 
             # Limpa o VAO 

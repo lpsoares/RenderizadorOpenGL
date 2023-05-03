@@ -40,23 +40,24 @@ class Callbacks:
 
     # Para eventos de movimento do mouse
     def cursor_pos_callback(window, xpos, ypos):
-        #ypos = Callbacks.framebuffer_size[1] - ypos
         ypos = Callbacks.resolution[1] - ypos
         offset = [xpos - Callbacks.cursor_position[0],
                   ypos - Callbacks.cursor_position[1]]
-        Callbacks.camera.send_mouse(offset)
+        if Callbacks.camera:
+            Callbacks.camera.send_mouse(offset)
         Callbacks.cursor_position = [xpos, ypos]
 
 
     # Para eventos do Scroll do mouse
     def scroll_callback(window, xoffset, yoffset):
-        Callbacks.camera.send_scroll([xoffset, yoffset])
+        if Callbacks.camera:
+            Callbacks.camera.send_scroll([xoffset, yoffset])
 
 
     # Caso as dimensões da janela principal sejam alteradas 
     def framebuffer_size_callback(window, width, height):
         
-        Callbacks.window_size = [width, height]
+        Callbacks.resolution = [width, height]
         glViewport(0, 0, width, height)
 
         width, height = glfw.get_framebuffer_size(window)

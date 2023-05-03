@@ -13,12 +13,13 @@ import glfw
 import numpy as np
 from renderizador.camera import *
 from renderizador.utils import *
+from renderizador.callbacks import *
 from pyquaternion import Quaternion
 
 
 class Camera:
 
-    def __init__(self, type="examine", resolution=(1024,768), near=0.1, far=100, eye=[0.0, 0.0, 10.0]):
+    def __init__(self, type="examine", near=0.1, far=100, eye=[0.0, 0.0, 10.0]):
         
         # Tipos de navegação ("examine", "fly")
         self.type = type
@@ -30,8 +31,7 @@ class Camera:
         self.fov = np.deg2rad(45.0)
 
         self.look_at = np.identity(4)
-
-        self.aspect = resolution[0]/resolution[1]
+        
         self.near = near
         self.far = far
 
@@ -63,9 +63,10 @@ class Camera:
 
     
     def calc_projection(self):
-        fovy = 2 * np.arctan(np.tan(self.fov/2)*(1/self.aspect))    
+        aspect = Callbacks.resolution[0]/Callbacks.resolution[1]
+        fovy = 2 * np.arctan(np.tan(self.fov/2)*(1/aspect))    
         top = self.near * np.tan(fovy)
-        right = top * self.aspect
+        right = top * aspect
 
         self.persp = np.array([[self.near/right, 0, 0, 0],
                           [0, self.near/top, 0, 0],
