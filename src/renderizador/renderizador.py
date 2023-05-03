@@ -10,6 +10,8 @@ Data: 23 de Abril de 2023
 """
 
 # Pacotes para o desenvolvimento do sistema
+from imgui.integrations.glfw import GlfwRenderer
+import imgui
 import contextlib
 import re
 from OpenGL.GL import *
@@ -96,7 +98,7 @@ class Renderizador:
     
 
     # Cria a jenala de renderização
-    def __init__(self, resolution=(1024, 768), near=0.1, far=100, lock_mouse=True):
+    def __init__(self, resolution=(1024, 768), near=0.1, far=100, lock_mouse=False):
 
         self.window = None
  
@@ -126,6 +128,9 @@ class Renderizador:
         self.fragment_shader_source = default_fragment_shader
         self.uniforms_source = {}
 
+        self.play = True
+        self.time = 0
+
         self.shader_toy = True
         self.shader_toy_mIsLowEnd = True  # Muda o parâmetro para HW_PERFORMANCE
 
@@ -145,10 +150,7 @@ class Renderizador:
             if platform.system().lower() == 'darwin':
                 glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, GL_TRUE)
 
-            #self.window = glfw.create_window(500, 400, self.title, None, None)
             self.window = glfw.create_window(self.resolution[0], self.resolution[1], self.title, None, None)
-            #print("CRIA"+str(self.resolution[0]), str(self.resolution[1]))
-
 
             if not self.window:
                 glfw.terminate()
@@ -260,12 +262,8 @@ class Renderizador:
         self.data = np.array(data, np.float32).flatten()
         self.mode = mode
         self.count = count
-        #data = np.array([j for i in data for j in i], np.float32)
 
     def parse_geometry(self):
-
-        #width, height = glfw.get_window_size(self.window)
-        #print(width, height)
 
         # Cria o VBO (Vertex Buffer Object) para armazenar vértices
         verticesVBO = arrays.vbo.VBO(self.data, usage='GL_STATIC_DRAW')
@@ -309,15 +307,91 @@ class Renderizador:
 
         return triangleVAO, self.count
 
+    # Todos os detalhes da interfacce gráfica de usuário
+    def gui_interface(self):
+        pass
+        
+        # Menu bar
+        # if imgui.begin_main_menu_bar():
+        #     if imgui.begin_menu("File", True):
+        #         clicked_quit, selected_quit = imgui.menu_item("Quit", "Cmd+Q", False, True)
+        #         if clicked_quit:
+        #             sys.exit(0)
+        #         imgui.end_menu()
+        #     imgui.end_main_menu_bar()
+        
+        # opened_state = True
+        # with imgui.begin("Example Tab Bar"):
+        #     with imgui.begin_tab_bar("MyTabBar") as tab_bar:
+        #         if tab_bar.opened:
+        #             with imgui.begin_tab_item("Item 1") as item1:
+        #                 if item1.selected:
+        #                     imgui.text("Here is the tab content!")
+
+        #             with imgui.begin_tab_item("Item 2") as item2:
+        #                 if item2.selected:
+        #                     imgui.text("Another content...")
+
+                    # with imgui.begin_tab_item("Item 3", opened=opened_state) as item3:
+                    #     opened_state = item3.opened
+                    #     if item3.selected:
+                    #         imgui.text("Hello Saylor!")
+
+        # is_expand, show_custom_window = imgui.begin("Custom window", True)
+        # if is_expand:
+        #     imgui.text("Bar")
+        #     imgui.text_ansi("B\033[31marA\033[mnsi ")
+        #     imgui.text_ansi_colored("Eg\033[31mgAn\033[msi ", 0.2, 1.0, 0.0)
+        #     imgui.extra.text_ansi_colored("Eggs", 0.2, 1.0, 0.0)
+        # imgui.end()
+
+        # viewport = imgui.get_main_viewport()
+        # frame_height = imgui.get_frame_height()
+        # imgui.set_next_window_position(viewport.pos.x-1, viewport.pos.y + viewport.size.y - frame_height)
+        # imgui.set_next_window_size(viewport.size.x+2, frame_height)
+        
+        # flags = imgui.WINDOW_NO_DECORATION | imgui.WINDOW_NO_INPUTS | \
+        #         imgui.WINDOW_NO_MOVE | imgui.WINDOW_NO_SCROLL_WITH_MOUSE | \
+        #         imgui.WINDOW_NO_SAVED_SETTINGS | \
+        #         imgui.WINDOW_NO_BRING_TO_FRONT_ON_FOCUS | imgui.WINDOW_NO_BACKGROUND | \
+        #         imgui.WINDOW_MENU_BAR
+
+        # with imgui.begin("Status Bar", flags=flags):
+        #     with imgui.begin_menu_bar() as menu_bar:
+        #         imgui.text("Here!")
+
+        # imgui.begin("Progress bar example")
+        # imgui.progress_bar(0.7, (100,20), "Overlay text")
+        # imgui.end()
+
+
+        viewport = imgui.get_main_viewport()
+        imgui.set_next_window_position(viewport.pos.x+10, viewport.pos.y + viewport.size.y - 40)
+        imgui.set_next_window_size(80, 20)
+        flags = imgui.WINDOW_NO_DECORATION | imgui.WINDOW_NO_SAVED_SETTINGS
+        with imgui.begin("shadertoy", flags=flags):
+            if self.play:
+                if imgui.button('||'):
+                    self.play = False
+            else:
+                if imgui.arrow_button("Play", imgui.DIRECTION_RIGHT):
+                    self.play = True
+            imgui.same_line();
+            imgui.text(f"{self.time:.2f}")
+            
+        
 
     def render(self):
 
+        imgui.create_context()
 
         with self.create_main_window() as window:
 
             if self.window == None:
                 raise Exception("Janela não foi criada")
             
+            impl = GlfwRenderer(window)
+
             # Versões de Mac não suportam debug
             if platform.system().lower() != 'darwin':
                 # Exibe mensagens de Debug
@@ -437,7 +511,18 @@ class Renderizador:
                 not glfw.window_should_close(self.window)
             ):
 
+                # Captura e processa eventos da janela
+                glfw.poll_events()
 
+                # Processa os eventos da interface da janela
+                impl.process_inputs()
+
+                imgui.new_frame()
+
+
+                # Detalhes da interface da janela
+                self.gui_interface()
+                
                 # Limpa a janela com a cor de fundo e apagar o z-buffer
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
@@ -445,13 +530,15 @@ class Renderizador:
                 glUseProgram(program_id)
 
 
-            
-                # Fazendo os uniforms básicos do ShaderToy
-                if self.shader_toy:
+                if self.play:
+                    self.time = glfw.get_time()  # returna o tempo passado desde que a aplicação começou
+                else:
+                    glfw.set_time(self.time)
 
-                    tmp_passed_time = glfw.get_time()  # returna o tempo passado desde que a aplicação começou
-                    time_delta = tmp_passed_time - passed_time
-                    passed_time = tmp_passed_time
+                # Fazendo os uniforms básicos do ShaderToy
+                if self.shader_toy:    
+                    time_delta = self.time - passed_time
+                    passed_time = self.time
                     if passed_time - count_second > 1.0:
                         fps = count_frames / (passed_time - count_second)
                         count_second = passed_time
@@ -485,8 +572,8 @@ class Renderizador:
                 # Aumenta em um no contador de frames
                 frame += 1
 
-                # Captura e processa eventos da janela
-                glfw.poll_events()
+                imgui.render()
+                impl.render(imgui.get_draw_data())
 
                 # Faz a troca dos framebuffer (swap frame buffer)
                 glfw.swap_buffers(self.window)
@@ -498,6 +585,8 @@ class Renderizador:
 
             # Limpa o VBO
             # vbo.delete()
+    
+            impl.shutdown()
 
             # finaliza o glfw
             glfw.terminate()

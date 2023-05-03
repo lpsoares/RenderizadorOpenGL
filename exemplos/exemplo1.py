@@ -87,7 +87,7 @@ if __name__ == '__main__':
 
 
     # Criando renderizador
-    renderizador = Renderizador(resolution=(1024, 768), near=0.1, far=100.0)
+    renderizador = Renderizador(resolution=(1024, 768), near=0.1, far=100.0, lock_mouse=False)
 
     # Configura os Uniforms dos Shaders
     uniforms = {}

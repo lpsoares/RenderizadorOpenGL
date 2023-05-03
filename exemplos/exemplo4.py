@@ -20,7 +20,6 @@ if __name__ == '__main__':
     # Criando renderizador
     renderizador = Renderizador(resolution=(600, 400), lock_mouse=False)
    
-    #with open('silexars.frag') as file:
     with open('teste.frag') as file:
         text = file.read()
 
