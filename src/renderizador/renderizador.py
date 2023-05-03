@@ -96,13 +96,16 @@ class Renderizador:
     
 
     # Cria a jenala de renderização
-    def __init__(self, resolution=(1024, 768), near=0.1, far=100):
+    def __init__(self, resolution=(1024, 768), near=0.1, far=100, lock_mouse=True):
 
         self.window = None
  
         self.resolution = resolution
         self.near = near
         self.far = far
+
+        # Faz o mouse não aparecer e ficar preso no meio da tela
+        self.lock_mouse = lock_mouse
 
         # Cor padrão para o fundo da janela (para apagar o buffer de cores)
         self.background_color = (0.0, 0.0, 0.0, 1.0)
@@ -418,7 +421,8 @@ class Renderizador:
             Callbacks.framebuffer_size = [width, height]
 
             # desativa a apresentação do cursor
-            glfw.set_input_mode(self.window, glfw.CURSOR, glfw.CURSOR_DISABLED)
+            if self.lock_mouse:
+                glfw.set_input_mode(self.window, glfw.CURSOR, glfw.CURSOR_DISABLED)
 
             # Ativa o Z-Buffer
             glEnable(GL_DEPTH_TEST)
