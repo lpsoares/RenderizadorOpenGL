@@ -40,7 +40,8 @@ class Callbacks:
 
     # Para eventos de movimento do mouse
     def cursor_pos_callback(window, xpos, ypos):
-        ypos = Callbacks.framebuffer_size[1] - ypos
+        #ypos = Callbacks.framebuffer_size[1] - ypos
+        ypos = Callbacks.resolution[1] - ypos
         offset = [xpos - Callbacks.cursor_position[0],
                   ypos - Callbacks.cursor_position[1]]
         Callbacks.camera.send_mouse(offset)
@@ -81,7 +82,6 @@ class Callbacks:
 
         width = Callbacks.framebuffer_size[0]
         height = Callbacks.framebuffer_size[1]
-
         mag = width/Callbacks.resolution[0]
 
         if Callbacks.mouse_pressed:
@@ -89,13 +89,11 @@ class Callbacks:
         
         pos_clicked = np.array(Callbacks.mouse_pos_clicked)
         pos_clicked *= int(mag)
-        #pos_clicked[1] = height - pos_clicked[1]
         pos_clicked[0] = max(0, min(pos_clicked[0], width))
         pos_clicked[1] = max(0, min(pos_clicked[1], height))
 
         pos_down = np.array(Callbacks.mouse_pos_down)
         pos_down *= int(mag)
-        #pos_down[1] = height - pos_down[1]
         pos_down[0] = max(0, min(pos_down[0], width))
         pos_down[1] = max(0, min(pos_down[1], height))
 

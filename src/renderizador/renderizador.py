@@ -367,7 +367,7 @@ class Renderizador:
 
         viewport = imgui.get_main_viewport()
         imgui.set_next_window_position(viewport.pos.x+10, viewport.pos.y + viewport.size.y - 40)
-        imgui.set_next_window_size(80, 20)
+        imgui.set_next_window_size(0, 0) # Zero calcula de forma automática
         flags = imgui.WINDOW_NO_DECORATION | imgui.WINDOW_NO_SAVED_SETTINGS
         with imgui.begin("shadertoy", flags=flags):
             if self.play:
@@ -377,7 +377,12 @@ class Renderizador:
                 if imgui.arrow_button("Play", imgui.DIRECTION_RIGHT):
                     self.play = True
             imgui.same_line();
-            imgui.text(f"{self.time:.2f}")
+            imgui.text(f"   {self.time:.2f}  ")
+            imgui.same_line();
+            imgui.text(f"  {self.resolution[0]} x {self.resolution[1]}  ")
+
+            
+
             
         
 
