@@ -1,8 +1,7 @@
 PyOpenGL
 glfw
+imgui
 pyquaternion
-
-# imgui
 
 # Para exibir textos na tela
 # freetype-py
