@@ -132,6 +132,7 @@ class Renderizador:
 
         self.play = True
         self.time = 0
+        self.fps = 0
 
         self.shader_toy = True
         self.shader_toy_mIsLowEnd = True  # Muda o parâmetro para HW_PERFORMANCE
@@ -372,17 +373,23 @@ class Renderizador:
         imgui.set_next_window_size(0, 0) # Zero calcula de forma automática
         flags = imgui.WINDOW_NO_DECORATION | imgui.WINDOW_NO_SAVED_SETTINGS
         with imgui.begin("shadertoy", flags=flags):
+            if imgui.arrow_button("Back", imgui.DIRECTION_LEFT):
+                self.time = 0.0
+                glfw.set_time(self.time)
+            imgui.same_line()
             if self.play:
                 if imgui.button('||'):
                     self.play = False
             else:
                 if imgui.arrow_button("Play", imgui.DIRECTION_RIGHT):
                     self.play = True
-            imgui.same_line();
+            imgui.same_line()
             imgui.text(f"   {self.time:.2f}  ")
-            imgui.same_line();
+            imgui.same_line()
+            imgui.text(f"   {self.fps:.1f} fps  ")
+            imgui.same_line()
             imgui.text(f"  {Callbacks.resolution[0]} x {Callbacks.resolution[1]}  ")
-            imgui.same_line();
+            imgui.same_line()
             if imgui.button('[]'):
                 if glfw.get_window_attrib(self.window, glfw.MAXIMIZED):
                     glfw.restore_window(self.window)
@@ -469,6 +476,14 @@ class Renderizador:
             # Conecta (link) os shaders para a aplicação
             program_id = link_shader(vertexShader_id, fragmentShader_id)
 
+
+            # recursos usados para tratar valores gerais
+            frame = 0
+            time_delta = 0
+            passed_time = 0
+            count_second = 0
+            count_frames = 0
+
             # Caso os parâmetros do Shader Toy estejam habilidatos
             if self.shader_toy:
 
@@ -480,13 +495,7 @@ class Renderizador:
                 uniforms["iFrame"] = glGetUniformLocation(program_id, 'iFrame')
                 uniforms["iMouse"] = glGetUniformLocation(program_id, 'iMouse')
 
-                # recursos usados para detectar valores do Shader Toy
-                frame = 0
-                time_delta = 0
-                passed_time = 0
-                count_second = 0
-                count_frames = 0
-                fps = 0
+
 
             # Cadastra os Uniforms
             for field in self.uniforms_source:
@@ -544,21 +553,22 @@ class Renderizador:
                 else:
                     glfw.set_time(self.time)
 
+                
+                time_delta = self.time - passed_time
+                passed_time = self.time
+                if passed_time - count_second > 1.0:
+                    self.fps = count_frames / (passed_time - count_second)
+                    count_second = passed_time
+                    count_frames = 0
+                else:        
+                    count_frames += 1 
+
                 # Fazendo os uniforms básicos do ShaderToy
                 if self.shader_toy:    
-                    time_delta = self.time - passed_time
-                    passed_time = self.time
-                    if passed_time - count_second > 1.0:
-                        fps = count_frames / (passed_time - count_second)
-                        count_second = passed_time
-                        count_frames = 0
-                    else:        
-                        count_frames += 1 
-
                     glUniform2f(uniforms["iResolution"], Callbacks.framebuffer_size[0], Callbacks.framebuffer_size[1])
                     glUniform1f(uniforms["iTime"], passed_time)
                     glUniform1f(uniforms["iTimeDelta"], time_delta)
-                    glUniform1f(uniforms["iFrameRate"], fps)
+                    glUniform1f(uniforms["iFrameRate"], self.fps)
                     glUniform1ui(uniforms["iFrame"], frame)
                     glUniform4fv(uniforms["iMouse"], 1, Callbacks.get_mouse_clicked())
                     
