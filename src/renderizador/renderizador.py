@@ -19,7 +19,8 @@ import glfw
 import numpy as np
 import time
 
-
+# import Pillow for loading images
+from PIL import Image
 
 # Diversos includes para o projeto do Renderizador OpenGL
 from renderizador.transformations import *
@@ -27,6 +28,7 @@ from renderizador.camera import *
 from renderizador.callbacks import *
 from renderizador.uniforms import *
 from renderizador.programmable_shaders import *
+from renderizador.utils import *
 
 # Usado para checar a plataforma Mac e saber se compatível com chamadas de OpenGL
 import platform
@@ -238,6 +240,9 @@ class Renderizador:
                     # identificando vértice
                     vertex = vertices[index[f]*3:(index[f]*3)+3]
 
+                    if len(vertex) != 3:
+                        raise Exception("Vetor não possui 3 dimensões")
+
                     # identificando normal
                     if normals is not None:
                         normal = normals[index[f+1]*3:(index[f+1]*3)+3]
@@ -308,6 +313,40 @@ class Renderizador:
         # Desativa (unbind) o VAO
         glBindVertexArray(0)
 
+        # create texture
+        self.image = Image.open('tree-gf3fdc00cd_640.jpg')
+        self.image = self.image.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
+        self.image = np.asarray(self.image, np.uint8)
+    
+        self.textureId = glGenTextures(1)
+        #assert self.textureId != 0
+        # if self.textureId != 0:
+        #     glDeleteTextures([self.textureId])
+        # self.textureId = 0
+
+        glBindTexture(GL_TEXTURE_2D, self.textureId)
+
+        glTexImage2D(
+            GL_TEXTURE_2D,
+            0,
+            GL_RGB,
+            self.image.shape[1],
+            self.image.shape[0],
+            0,
+            GL_RGB,
+            GL_UNSIGNED_BYTE,
+            get_pointer(self.image)
+        )
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        
+        
+        # unbind textura
+        glBindTexture(GL_TEXTURE_2D, 0)
+        
         return triangleVAO, self.count
 
     # Todos os detalhes da interfacce gráfica de usuário
@@ -495,7 +534,7 @@ class Renderizador:
                 uniforms["iFrame"] = glGetUniformLocation(program_id, 'iFrame')
                 uniforms["iMouse"] = glGetUniformLocation(program_id, 'iMouse')
 
-
+            uniforms["texture_size"] = glGetUniformLocation(program_id, 'texture_size')
 
             # Cadastra os Uniforms
             for field in self.uniforms_source:
@@ -547,13 +586,11 @@ class Renderizador:
                 # use our own rendering program
                 glUseProgram(program_id)
 
-
                 if self.play:
                     self.time = glfw.get_time()  # returna o tempo passado desde que a aplicação começou
                 else:
                     glfw.set_time(self.time)
 
-                
                 time_delta = self.time - passed_time
                 passed_time = self.time
                 if passed_time - count_second > 1.0:
@@ -572,7 +609,14 @@ class Renderizador:
                     glUniform1ui(uniforms["iFrame"], frame)
                     glUniform4fv(uniforms["iMouse"], 1, Callbacks.get_mouse_clicked())
                     
+                # Tamanho da textura (se for usar)
+                glUniform2f(uniforms["texture_size"], self.image.shape[1], self.image.shape[0])
+
                 parse_uniforms(self.uniforms_source, uniforms)
+
+                # Liga a textura para o OpenGL
+                glActiveTexture(GL_TEXTURE0)
+                glBindTexture(GL_TEXTURE_2D, self.textureId)
 
                 # Ativa (bind) VAO
                 glBindVertexArray(vao)
