@@ -29,6 +29,7 @@ from renderizador.callbacks import *
 from renderizador.uniforms import *
 from renderizador.programmable_shaders import *
 from renderizador.utils import *
+from renderizador.texture import *
 
 # Usado para checar a plataforma Mac e saber se compatível com chamadas de OpenGL
 import platform
@@ -89,7 +90,6 @@ uvs = np.array(
     ], np.float32
 )
 
-
 class Renderizador:
 
     # Define a cor de fundo da renderização
@@ -119,10 +119,8 @@ class Renderizador:
         # Título padrão da janela de renderização
         self.title = "Computação Gráfica"
        
-        # Cria recursos de manipulação de câmera
-        #self.camera = Camera("fly", resolution, near=near, far=far)
-        #self.camera = Camera("examine", Callbacks.resolution, near=near, far=far)
-        #Callbacks.camera  = self.camera
+        # Armazena as texturas
+        self.textures = []
 
         self.data = []
         self.mode = None
@@ -144,7 +142,7 @@ class Renderizador:
 
         if not glfw.init():
             raise Exception("Não foi possível iniciar o glfw")
-            #sys.exit(1)
+
         try:
             # Inicia e configura o glfw
             glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
@@ -160,14 +158,8 @@ class Renderizador:
             if not self.window:
                 glfw.terminate()
                 raise Exception("Não foi possível criar a janela glfw")
-                #sys.exit(2)
             glfw.make_context_current(self.window)
 
-            #glfw.set_input_mode(self.window, glfw.STICKY_KEYS, True)
-
-            # Cria a janela principal e colocar no contexto atual
-            #Callbacks.resolution = self.resolution
-                
             #glfw.set_window_pos(window, 0, 0) # define a posição da janela
 
             yield self.window
@@ -190,6 +182,8 @@ class Renderizador:
 
         self.uniforms_source = uniforms_source
 
+    def set_texture(self, filename, id):
+        self.textures.append(Texture(filename, id))
 
     def add_geometry(self, mode, vertices, normals=None, colors=None, uvs=None, create_normals=False, index=None):
 
@@ -313,100 +307,46 @@ class Renderizador:
         # Desativa (unbind) o VAO
         glBindVertexArray(0)
 
-        # create texture
-        self.image = Image.open('tree-gf3fdc00cd_640.jpg')
-        self.image = self.image.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
-        self.image = np.asarray(self.image, np.uint8)
-    
-        self.textureId = glGenTextures(1)
-        #assert self.textureId != 0
-        # if self.textureId != 0:
-        #     glDeleteTextures([self.textureId])
-        # self.textureId = 0
-
-        glBindTexture(GL_TEXTURE_2D, self.textureId)
-
-        glTexImage2D(
-            GL_TEXTURE_2D,
-            0,
-            GL_RGB,
-            self.image.shape[1],
-            self.image.shape[0],
-            0,
-            GL_RGB,
-            GL_UNSIGNED_BYTE,
-            get_pointer(self.image)
-        )
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        
-        
-        # unbind textura
-        glBindTexture(GL_TEXTURE_2D, 0)
-        
         return triangleVAO, self.count
+
+
+    def parse_textures(self):
+
+        for texture in self.textures:
+
+            # create texture
+            texture.image = Image.open(texture.filename)
+            texture.image = texture.image.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
+            texture.image = np.asarray(texture.image, np.uint8)
+        
+            texture.texture_id = glGenTextures(1)
+            #glDeleteTextures([texture.texture_id])
+            
+            glBindTexture(GL_TEXTURE_2D, texture.texture_id)
+
+            glTexImage2D(
+                GL_TEXTURE_2D,
+                0,
+                GL_RGB,
+                texture.image.shape[1],
+                texture.image.shape[0],
+                0,
+                GL_RGB,
+                GL_UNSIGNED_BYTE,
+                get_pointer(texture.image)
+            )
+
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+            
+            # unbind textura
+            glBindTexture(GL_TEXTURE_2D, 0)
+        
 
     # Todos os detalhes da interfacce gráfica de usuário
     def gui_interface(self):
-        pass
-        
-        # Menu bar
-        # if imgui.begin_main_menu_bar():
-        #     if imgui.begin_menu("File", True):
-        #         clicked_quit, selected_quit = imgui.menu_item("Quit", "Cmd+Q", False, True)
-        #         if clicked_quit:
-        #             sys.exit(0)
-        #         imgui.end_menu()
-        #     imgui.end_main_menu_bar()
-        
-        # opened_state = True
-        # with imgui.begin("Example Tab Bar"):
-        #     with imgui.begin_tab_bar("MyTabBar") as tab_bar:
-        #         if tab_bar.opened:
-        #             with imgui.begin_tab_item("Item 1") as item1:
-        #                 if item1.selected:
-        #                     imgui.text("Here is the tab content!")
-
-        #             with imgui.begin_tab_item("Item 2") as item2:
-        #                 if item2.selected:
-        #                     imgui.text("Another content...")
-
-                    # with imgui.begin_tab_item("Item 3", opened=opened_state) as item3:
-                    #     opened_state = item3.opened
-                    #     if item3.selected:
-                    #         imgui.text("Hello Saylor!")
-
-        # is_expand, show_custom_window = imgui.begin("Custom window", True)
-        # if is_expand:
-        #     imgui.text("Bar")
-        #     imgui.text_ansi("B\033[31marA\033[mnsi ")
-        #     imgui.text_ansi_colored("Eg\033[31mgAn\033[msi ", 0.2, 1.0, 0.0)
-        #     imgui.extra.text_ansi_colored("Eggs", 0.2, 1.0, 0.0)
-        # imgui.end()
-
-        # viewport = imgui.get_main_viewport()
-        # frame_height = imgui.get_frame_height()
-        # imgui.set_next_window_position(viewport.pos.x-1, viewport.pos.y + viewport.size.y - frame_height)
-        # imgui.set_next_window_size(viewport.size.x+2, frame_height)
-        
-        # flags = imgui.WINDOW_NO_DECORATION | imgui.WINDOW_NO_INPUTS | \
-        #         imgui.WINDOW_NO_MOVE | imgui.WINDOW_NO_SCROLL_WITH_MOUSE | \
-        #         imgui.WINDOW_NO_SAVED_SETTINGS | \
-        #         imgui.WINDOW_NO_BRING_TO_FRONT_ON_FOCUS | imgui.WINDOW_NO_BACKGROUND | \
-        #         imgui.WINDOW_MENU_BAR
-
-        # with imgui.begin("Status Bar", flags=flags):
-        #     with imgui.begin_menu_bar() as menu_bar:
-        #         imgui.text("Here!")
-
-        # imgui.begin("Progress bar example")
-        # imgui.progress_bar(0.7, (100,20), "Overlay text")
-        # imgui.end()
-
-
         viewport = imgui.get_main_viewport()
         imgui.set_next_window_position(viewport.pos.x+10, viewport.pos.y + viewport.size.y - 40)
         imgui.set_next_window_size(0, 0) # Zero calcula de forma automática
@@ -467,6 +407,7 @@ class Renderizador:
                 self.add_geometry(GL_TRIANGLE_STRIP, vertices, colors=colors, uvs=uvs, create_normals=True)
 
             vao, count  = self.parse_geometry()
+            self.parse_textures()
 
             self.vertex_shader_source = str(self.vertex_shader_source)
 
@@ -534,7 +475,8 @@ class Renderizador:
                 uniforms["iFrame"] = glGetUniformLocation(program_id, 'iFrame')
                 uniforms["iMouse"] = glGetUniformLocation(program_id, 'iMouse')
 
-            uniforms["texture_size"] = glGetUniformLocation(program_id, 'texture_size')
+            if self.textures:
+                uniforms["texture_size"] = glGetUniformLocation(program_id, 'texture_size')
 
             # Cadastra os Uniforms
             for field in self.uniforms_source:
@@ -561,6 +503,7 @@ class Renderizador:
             # Call back do resize do Framebuffer precisa ser configurado no final do processo de iniciação
             glfw.set_framebuffer_size_callback(self.window, Callbacks.framebuffer_size_callback)
 
+            #glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 
             # Realiza a renderização enquanto a janela não for fechada
             while (
@@ -608,15 +551,18 @@ class Renderizador:
                     glUniform1f(uniforms["iFrameRate"], self.fps)
                     glUniform1ui(uniforms["iFrame"], frame)
                     glUniform4fv(uniforms["iMouse"], 1, Callbacks.get_mouse_clicked())
-                    
-                # Tamanho da textura (se for usar)
-                glUniform2f(uniforms["texture_size"], self.image.shape[1], self.image.shape[0])
 
+                # Case existam texturas
+                for texture in self.textures:
+                    # Liga a textura para o OpenGL
+                    glActiveTexture(GL_TEXTURE0 + texture.id)
+                    glBindTexture(GL_TEXTURE_2D, texture.texture_id)
+
+                    # Tamanho da textura (se for usar)
+                    glUniform2f(uniforms["texture_size"], texture.image.shape[1], texture.image.shape[0])
+
+                # Passa todos os uniforms para os shaders
                 parse_uniforms(self.uniforms_source, uniforms)
-
-                # Liga a textura para o OpenGL
-                glActiveTexture(GL_TEXTURE0)
-                glBindTexture(GL_TEXTURE_2D, self.textureId)
 
                 # Ativa (bind) VAO
                 glBindVertexArray(vao)
@@ -647,7 +593,6 @@ class Renderizador:
 
             # Limpa o VAO 
             glDeleteVertexArrays(1, [vao])
-            #glDeleteVertexArrays(2, [triangleVAO, sphereVAO])
 
             # Limpa o VBO
             # vbo.delete()
@@ -656,6 +601,3 @@ class Renderizador:
 
             # finaliza o glfw
             glfw.terminate()
-
-
-# glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)

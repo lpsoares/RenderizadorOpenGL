@@ -50,6 +50,7 @@ if __name__ == '__main__':
 
     # Passando Shaders e renderizando cena
     renderizador.set_shaders(vertex_shader_source, fragment_shader_source)
+    renderizador.set_texture("tree-gf3fdc00cd_640.jpg", 0)
 
     # Vertices (forçando ser float32 para evitar que algum vire outro tipo)
     vertices = np.array(
