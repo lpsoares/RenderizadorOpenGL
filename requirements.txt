@@ -1,10 +1,27 @@
-PyOpenGL
-glfw
-imgui
-pillow
-pyquaternion
-soundfile
-sounddevice
+# Dependências principais de renderização OpenGL
+PyOpenGL>=3.1.0
+PyOpenGL-accelerate>=3.1.0  # Opcional, melhora performance
+glfw>=2.5.5
+numpy>=1.22.0
 
-# Para exibir textos na tela
-# freetype-py
+# Interface gráfica
+imgui>=1.4.0
+# freetype-py>=2.3.0  # Descomente para suporte a texto renderizado
+
+# Processamento de imagens e texturas
+pillow>=9.0.0
+
+# Manipulação de transformações 3D
+pyquaternion>=0.9.9
+
+# Processamento e reprodução de áudio
+soundfile>=0.10.0
+sounddevice>=0.4.3
+
+# Dependências opcionais
+# matplotlib>=3.5.0  # Para visualização de dados e depuração
+# pytest>=7.0.0  # Para testes automatizados
+
+# Outras dependências
+# pyyaml>=6.0  # Para configuração baseada em arquivos
+# tqdm>=4.62.0  # Para barras de progresso em operações longas

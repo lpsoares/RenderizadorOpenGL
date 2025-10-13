@@ -47,22 +47,6 @@ def create_gui_interface(renderer):
             else:
                 glfw.maximize_window(renderer.window)
 
-        # Controles de áudio (ShaderToy-like)
-        if imgui.tree_node("Audio\n(Shadertoy-like)"):
-            changed_min, new_min = imgui.slider_float("dB min", renderer.audio_db_min, -120.0, -20.0, '%.1f dB')
-            changed_max, new_max = imgui.slider_float("dB max", renderer.audio_db_max, -40.0, 0.0, '%.1f dB')
-            changed_tau, new_tau = imgui.slider_float("decay tau", renderer.audio_decay_tau, 0.03, 1.0, '%.2f s')
-            changed_gain, new_gain = imgui.slider_float("gain", renderer.audio_gain, 0.1, 8.0, '%.2f x')
-            if changed_min:
-                renderer.audio_db_min = float(new_min)
-            if changed_max:
-                # manter coerência: max > min
-                renderer.audio_db_max = float(max(new_max, renderer.audio_db_min + 1.0))
-            if changed_tau:
-                renderer.audio_decay_tau = float(new_tau)
-            if changed_gain:
-                renderer.audio_gain = float(new_gain)
-            imgui.tree_pop()
 
 def gui_interface(renderer):
     """Wrapper function for the GUI interface."""

@@ -20,5 +20,5 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 # Importar o renderizador de frag
 if __name__ == '__main__':
     # Apenas redireciona para o script principal
-    from src.renderizador.utils.fragment_shader_renderer import main
+    from src.renderizador.utils.fragshader_rndr import main
     main()

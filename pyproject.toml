@@ -1,3 +1,81 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "renderizador-opengl"
+version = "0.1.0"
+description = "Renderizador Python com execução nativa de shaders ShaderToy e gráficos 3D via OpenGL"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Luciano Soares", email = "lpsoares@insper.edu.br"}
+]
+maintainers = [
+    {name = "Luciano Soares", email = "lpsoares@insper.edu.br"}
+]
+keywords = ["shadertoy", "opengl", "renderização", "3d", "fragment-shader", "gráficos"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Multimedia :: Graphics :: 3D Rendering",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+
+dependencies = [
+    "PyOpenGL>=3.1.0",
+    "glfw>=2.5.5",
+    "imgui>=1.4.0",
+    "numpy>=1.22.0",
+    "pillow>=9.0.0",
+    "pyquaternion>=0.9.9",
+    "soundfile>=0.10.0",
+    "sounddevice>=0.4.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.0.0",
+]
+docs = [
+    "sphinx>=6.0.0",
+    "sphinx-rtd-theme>=1.2.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/lpsoares/RenderizadorOpenGL"
+"Bug Tracker" = "https://github.com/lpsoares/RenderizadorOpenGL/issues"
+"Documentation" = "https://github.com/lpsoares/RenderizadorOpenGL/docs"
+
+[project.scripts]
+render-frag = "renderizador.utils.fragment_shader_renderer:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
