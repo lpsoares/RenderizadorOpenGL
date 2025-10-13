@@ -5,3 +5,4 @@ __pycache__/
 *.egg-info/
 imgui.ini
 exemplos/teste.frag
+build/
