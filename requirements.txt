@@ -1,6 +1,7 @@
 PyOpenGL
 glfw
 imgui
+pillow
 pyquaternion
 soundfile
 sounddevice
