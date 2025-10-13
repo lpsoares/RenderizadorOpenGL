@@ -19,8 +19,14 @@ import glfw
 import numpy as np
 import time
 
-# import Pillow for loading images
+# importa Pillow para carregar imagens
 from PIL import Image
+
+# importa soundfile para carregar arquivos de áudio
+import soundfile as sf
+
+# importa sounddevice para playback/streaming
+import sounddevice as sd
 
 # Diversos includes para o projeto do Renderizador OpenGL
 from renderizador.transformations import *
@@ -30,6 +36,7 @@ from renderizador.uniforms import *
 from renderizador.programmable_shaders import *
 from renderizador.utils import *
 from renderizador.texture import *
+from renderizador.audio import *
 
 # Usado para checar a plataforma Mac e saber se compatível com chamadas de OpenGL
 import platform
@@ -122,6 +129,9 @@ class Renderizador:
         # Armazena as texturas
         self.textures = []
 
+        # Armazena os audios
+        self.audios = []
+
         self.data = []
         self.mode = None
         self.count = 0
@@ -133,6 +143,10 @@ class Renderizador:
         self.play = True
         self.time = 0
         self.fps = 0
+
+        # audio control state
+        self._audio_initialized = False
+        self._prev_play_state = None
 
         self.shader_toy = True
         self.shader_toy_mIsLowEnd = True  # Muda o parâmetro para HW_PERFORMANCE
@@ -184,6 +198,9 @@ class Renderizador:
 
     def set_texture(self, filename, id):
         self.textures.append(Texture(filename, id))
+
+    def set_audio(self, filename, id):
+        self.audios.append(Audio(filename, id))
 
     def add_geometry(self, mode, vertices, normals=None, colors=None, uvs=None, create_normals=False, index=None):
 
@@ -311,6 +328,7 @@ class Renderizador:
 
 
     def parse_textures(self):
+        ''' Carrega as texturas usando Pillow e cria as texturas no OpenGL '''
 
         for texture in self.textures:
 
@@ -344,6 +362,101 @@ class Renderizador:
             # unbind textura
             glBindTexture(GL_TEXTURE_2D, 0)
         
+
+    def parse_audios(self):
+        ''' Carrega os arquivos de áudio usando soundfile '''
+
+        for audio in self.audios:
+            audio.data, audio.sr = sf.read(audio.filename)
+
+    
+    def _init_audio_streams(self):
+        # criar um OutputStream por arquivo de audio carregado
+        def make_callback(audio):
+            n_samples = audio.data.shape[0]
+            channels = 1 if audio.data.ndim == 1 else audio.data.shape[1]
+            audio._pos = 0
+
+            def callback(outdata, frames, time_info, status):
+                if status:
+                    # opcional: log
+                    # print("sounddevice status:", status)
+                    pass
+                start = audio._pos
+                end = start + frames
+                if end <= n_samples:
+                    chunk = audio.data[start:end]
+                    audio._pos = end % n_samples
+                else:
+                    # concatena tail + head para fazer loop
+                    part1 = audio.data[start:n_samples]
+                    part2 = audio.data[0:(end - n_samples)]
+                    chunk = np.concatenate([part1, part2], axis=0)
+                    audio._pos = (end - n_samples) % n_samples
+
+                # assegura shape (frames, channels)
+                if channels == 1:
+                    outdata[:] = chunk.reshape(-1, 1)
+                else:
+                    outdata[:] = chunk
+
+            return callback
+
+        for audio in self.audios:
+            # garante float32 no intervalo -1..1
+            audio.data = audio.data.astype('float32')
+            channels = 1 if audio.data.ndim == 1 else audio.data.shape[1]
+            # inicializa posição e cria stream, mas NÃO inicia automaticamente
+            audio._pos = 0
+            audio._sd_stream = sd.OutputStream(
+                samplerate=audio.sr,
+                channels=channels,
+                dtype='float32',
+                callback=make_callback(audio)
+            )
+            audio._sd_stream_active = False
+            audio._looping = True
+        self._audio_initialized = True
+        # iniciar streams somente se já estiver em play
+        if self.play:
+            self._resume_audio_streams()
+
+    def _stop_audio_streams(self):
+        for audio in self.audios:
+            stream = getattr(audio, '_sd_stream', None)
+            if stream is not None:
+                try:
+                    stream.stop()
+                    stream.close()
+                except Exception:
+                    pass
+
+    def _pause_audio_streams(self):
+        """Pause streams but preserve audio._pos so resume continues where left off."""
+        if not self._audio_initialized:
+            return
+        for audio in self.audios:
+            stream = getattr(audio, '_sd_stream', None)
+            if stream is not None and getattr(audio, '_sd_stream_active', False):
+                try:
+                    stream.stop()
+                except Exception:
+                    pass
+                audio._sd_stream_active = False
+
+    def _resume_audio_streams(self):
+        """Resume previously created streams. Streams must have been created by _init_audio_streams()."""
+        if not self._audio_initialized:
+            return
+        for audio in self.audios:
+            stream = getattr(audio, '_sd_stream', None)
+            if stream is not None and not getattr(audio, '_sd_stream_active', False):
+                try:
+                    stream.start()
+                    audio._sd_stream_active = True
+                except Exception:
+                    # se start falhar, ignore para não quebrar render loop
+                    audio._sd_stream_active = False
 
     # Todos os detalhes da interfacce gráfica de usuário
     def gui_interface(self):
@@ -408,6 +521,9 @@ class Renderizador:
 
             vao, count  = self.parse_geometry()
             self.parse_textures()
+            self.parse_audios()
+
+            self._init_audio_streams()
 
             self.vertex_shader_source = str(self.vertex_shader_source)
 
@@ -529,10 +645,24 @@ class Renderizador:
                 # use our own rendering program
                 glUseProgram(program_id)
 
+                # controla play/pause do render e do áudio
                 if self.play:
                     self.time = glfw.get_time()  # returna o tempo passado desde que a aplicação começou
                 else:
                     glfw.set_time(self.time)
+
+                # detectar mudança de estado do play para pausar/resumir áudio
+                if self._prev_play_state is None:
+                    self._prev_play_state = self.play
+                elif self._prev_play_state != self.play:
+                    # transição detectada
+                    if self.play:
+                        # resume áudio
+                        self._resume_audio_streams()
+                    else:
+                        # pause áudio
+                        self._pause_audio_streams()
+                    self._prev_play_state = self.play
 
                 time_delta = self.time - passed_time
                 passed_time = self.time
@@ -596,7 +726,9 @@ class Renderizador:
 
             # Limpa o VBO
             # vbo.delete()
-    
+
+            self._stop_audio_streams()
+
             impl.shutdown()
 
             # finaliza o glfw

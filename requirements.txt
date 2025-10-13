@@ -2,6 +2,8 @@ PyOpenGL
 glfw
 imgui
 pyquaternion
+soundfile
+sounddevice
 
 # Para exibir textos na tela
 # freetype-py
