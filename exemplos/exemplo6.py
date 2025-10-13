@@ -19,20 +19,20 @@ from renderizador.transformations import *
 fragment_shader_source = r'''
 
  void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
-    
-    // Normalized pixel coordinates (from 0 to 1)
+
     vec2 uv = fragCoord/iResolution.xy;
+	
+	vec4 col1 = texture( iChannel0, uv );
+	vec4 col2 = texture( iChannel1, uv );
+    
+    vec4 col;
+    if (uv.x > 0.5)
+        col=col1;
+    else
+        col=col2;
 
-    //float sound = texture(iChannel0, vec2(uv.x, 0.25)).r;
+	fragColor = col;
 
-    //vec3 col = 0.5 + 0.5*cos(iTime+uv.xyx+vec3(0,2,4));
-
-    vec4 texColor = texture(iChannel0, uv);
-    fragColor = texColor;
-
-
-    // Output to screen
-    //fragColor = vec4(col,1.0);
 }
 
 '''
@@ -47,11 +47,13 @@ if __name__ == '__main__':
     renderizador.set_shaders(fragment_shader_source=fragment_shader_source)
 
     base = os.path.dirname(os.path.abspath(__file__))
-    
+
     texture_file = os.path.join(base, "texture/tree-gf3fdc00cd_640.jpg")
     renderizador.set_texture(texture_file, 0)
+    texture_file2 = os.path.join(base, "texture/daylily-7390789_1280.jpg")
+    renderizador.set_texture(texture_file2, 1)
 
     audio_file = os.path.join(base, "audio/synth.wav")
-    renderizador.set_audio(audio_file, 1)  # https://github.com/pdx-cs-sound/wavs/blob/main/synth.wav
+    renderizador.set_audio(audio_file, 2)  # https://github.com/pdx-cs-sound/wavs/blob/main/synth.wav
 
     renderizador.render()

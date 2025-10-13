@@ -334,7 +334,7 @@ class Renderizador:
 
             # create texture
             texture.image = Image.open(texture.filename)
-            texture.image = texture.image.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
+            #texture.image = texture.image.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
             texture.image = np.asarray(texture.image, np.uint8)
         
             texture.texture_id = glGenTextures(1)
@@ -342,14 +342,25 @@ class Renderizador:
             
             glBindTexture(GL_TEXTURE_2D, texture.texture_id)
 
+            # detectar número de canais e usar formato/ internalformat corretos
+            if texture.image.ndim == 3:
+                channels = texture.image.shape[2]
+                if channels == 4:
+                    fmt = GL_RGBA
+                else:
+                    fmt = GL_RGB
+            else:
+                # imagem em grayscale
+                fmt = GL_RED
+                
             glTexImage2D(
                 GL_TEXTURE_2D,
                 0,
-                GL_RGB,
+                fmt,
                 texture.image.shape[1],
                 texture.image.shape[0],
                 0,
-                GL_RGB,
+                fmt,
                 GL_UNSIGNED_BYTE,
                 get_pointer(texture.image)
             )
@@ -699,12 +710,19 @@ class Renderizador:
 
                 # Case existam texturas
                 for texture in self.textures:
+
                     # Liga a textura para o OpenGL
-                    glActiveTexture(GL_TEXTURE0 + texture.id)
+                    glActiveTexture(GL_TEXTURE0 + texture.channel)
                     glBindTexture(GL_TEXTURE_2D, texture.texture_id)
 
                     # Tamanho da textura (se for usar)
                     glUniform2f(uniforms["texture_size"], texture.image.shape[1], texture.image.shape[0])
+                    # Se for shaderToy, faça o binding do sampler iChannelN -> texture unit N
+                    if self.shader_toy:
+                        sampler_name = f"iChannel{texture.channel}"
+                        if sampler_name in uniforms and uniforms[sampler_name] != -1:
+                            # define qual texture unit o sampler deve usar
+                            glUniform1i(uniforms[sampler_name], int(texture.channel))
 
                 # Passa todos os uniforms para os shaders
                 parse_uniforms(self.uniforms_source, uniforms)
