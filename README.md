@@ -7,8 +7,6 @@
 
 Um renderizador modular em Python baseado em OpenGL, com **suporte nativo para shaders do ShaderToy**. Execute códigos do ShaderToy diretamente, além de criar gráficos 3D, usar shaders customizados, texturas e visualizações de áudio reativas.
 
-![RenderizadorOpenGL Demo](https://via.placeholder.com/800x400?text=RenderizadorOpenGL+Demo)
-
 ## 🚀 Funcionalidades
 
 - **Renderização OpenGL** com pipeline moderno (shaders programáveis)
@@ -144,7 +142,7 @@ main()
 Para mais detalhes sobre a API e exemplos, consulte a documentação completa em [docs/](docs/):
 
 - [Guia de Início Rápido](docs/getting_started.md)
-- [**Compatibilidade com ShaderToy**](docs/shadertoy_compatibility.md) - Guia completo de como usar shaders do ShaderToy
+- [Compatibilidade com ShaderToy](docs/shadertoy_compatibility.md) - Guia completo de como usar shaders do ShaderToy
 - [Renderizador de Fragment Shaders](docs/fragment_shader_renderer.md)
 
 ### Exemplo de Compatibilidade ShaderToy

@@ -127,9 +127,16 @@ O renderizador fornece as seguintes uniformes compatíveis com ShaderToy:
 
 O repositório contém vários exemplos que demonstram diferentes aspectos do renderizador:
 
-- `exemplo0.py`: Renderização básica
-- `exemplo1.py`: Câmera e iluminação
-- `exemplo5.py`: Texturas
+- `exemplo0.py`: Renderização básica de um triângulo
+- `exemplo1.py`: Cubo 3D com controle de câmera e iluminação
+- `exemplo2.py`: Exemplo básico de shader estilo ShaderToy
+- `exemplo3.py`: Exemplo mais complexto originário do ShaderToy
+- `exemplo4.py`: Exemplo para carregar arquivos frag
+- `exemplo5.py`: Exemplo com textura básica
+- `exemplo6.py`: Exemplo com texturas e áudio
+- `exemplo7.py`: Exemplo básico de áudio do ShaderToy
+- `exemplo8.py`: Mais um exemplo de áudio do ShaderToy
+- `exemplo8.py`: Outro exemplo de áudio do ShaderToy
 
 Estude esses exemplos para entender como usar o RenderizadorOpenGL para suas próprias aplicações.
 

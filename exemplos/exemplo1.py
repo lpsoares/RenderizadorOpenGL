@@ -117,31 +117,35 @@ if __name__ == '__main__':
 
     # Vertices (forçando ser float32 para evitar que algum vire outro tipo)
     vertices = np.array([
-        -1.0,  1.0, -1.0,
-        -1.0,  1.0,  1.0,
-        1.0,  1.0,  1.0,
-        1.0,  1.0, -1.0,
-        -1.0, -1.0, -1.0,
-        -1.0, -1.0,  1.0,
-        1.0, -1.0,  1.0,
-        1.0, -1.0, -1.0,
+        -1.0,  1.0, -1.0,  # 0: canto superior esquerdo traseiro
+        -1.0,  1.0,  1.0,  # 1: canto superior esquerdo frontal
+         1.0,  1.0,  1.0,  # 2: canto superior direito frontal
+         1.0,  1.0, -1.0,  # 3: canto superior direito traseiro
+        -1.0, -1.0, -1.0,  # 4: canto inferior esquerdo traseiro
+        -1.0, -1.0,  1.0,  # 5: canto inferior esquerdo frontal
+         1.0, -1.0,  1.0,  # 6: canto inferior direito frontal
+         1.0, -1.0, -1.0,  # 7: canto inferior direito traseiro
     ], np.float32)
-
+    
+    
+    # Índices dos triângulos para formar as 6 faces do cubo
     index = np.array([
-        0, 1, 3,
-        1, 2, 3,
-        0, 4, 1,
-        4, 5, 1,
-        1, 5, 2,
-        5, 6, 2,
-        2, 6, 3,
-        6, 7, 3,
-        3, 7, 0,
-        7, 4, 0,
-        4, 7, 5,
-        7, 6, 5,
+        0, 1, 3,  # face superior (triângulo 1)
+        1, 2, 3,  # face superior (triângulo 2)
+        0, 4, 1,  # face esquerda (triângulo 1)
+        4, 5, 1,  # face esquerda (triângulo 2)
+        1, 5, 2,  # face frontal (triângulo 1)
+        5, 6, 2,  # face frontal (triângulo 2)
+        2, 6, 3,  # face direita (triângulo 1)
+        6, 7, 3,  # face direita (triângulo 2)
+        3, 7, 0,  # face traseira (triângulo 1)
+        7, 4, 0,  # face traseira (triângulo 2)
+        4, 7, 5,  # face inferior (triângulo 1)
+        7, 6, 5,  # face inferior (triângulo 2)
     ])
 
+    # Adicionando geometria do cubo
     renderizador.add_geometry(GL_TRIANGLES, vertices, create_normals=True, index=index)
 
+    # Iniciar renderização
     renderizador.render()

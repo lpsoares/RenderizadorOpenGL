@@ -89,4 +89,3 @@ Existem várias limitações, aqui estão algumas delas:
 
 - [Documentação do ShaderToy](https://www.shadertoy.com/howto)
 - [The Book of Shaders](https://thebookofshaders.com/)
-- [Coleção de shaders compatíveis](exemplos/frag/)
