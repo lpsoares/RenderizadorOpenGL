@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 """
-Renderizador OpenGL.
+Camera module for 3D navigation and view control.
 
 Desenvolvido por: Luciano Soares <lpsoares@insper.edu.br>
 Disciplina: Computação Gráfica
@@ -11,16 +11,29 @@ Data: 24 de Abril de 2023
 
 import glfw
 import numpy as np
-from renderizador.camera import *
-from renderizador.utils import *
-from renderizador.callbacks import *
 from pyquaternion import Quaternion
+from renderizador.utils.callbacks import Callbacks
 
+def normalize(v):
+    """Normalize a vector."""
+    norm = np.linalg.norm(v)
+    if norm == 0:
+        return v
+    return v / norm
 
 class Camera:
+    """Camera class for handling view transformations and navigation."""
 
     def __init__(self, type="examine", near=0.1, far=100, eye=[0.0, 0.0, 10.0]):
+        """
+        Initialize camera with specified parameters.
         
+        Args:
+            type: Camera type, either "examine" or "fly"
+            near: Near plane distance
+            far: Far plane distance
+            eye: Initial eye/camera position
+        """
         # Tipos de navegação ("examine", "fly")
         self.type = type
 
@@ -44,9 +57,8 @@ class Camera:
         self.keyboard_speed = 0.2
         self.scroll_speed = 0.2
 
-
     def calc_look_at(self):
-
+        """Calculate the look-at matrix for the camera."""
         # Matriz de Look At clássica
         w = normalize(self.at - self.eye)
         u = normalize(np.cross(w, self.up))
@@ -60,9 +72,9 @@ class Camera:
         self.look_at[0,3] = np.dot(-u,self.eye)
         self.look_at[1,3] = np.dot(-v,self.eye)
         self.look_at[2,3] = np.dot(w,self.eye)
-
     
     def calc_projection(self):
+        """Calculate the projection matrix for the camera."""
         aspect = Callbacks.resolution[0]/Callbacks.resolution[1]
         fovy = 2 * np.arctan(np.tan(self.fov/2)*(1/aspect))    
         top = self.near * np.tan(fovy)
@@ -75,22 +87,22 @@ class Camera:
 
         return self.persp
     
-
     def get_eye(self):
+        """Get the camera position."""
         return self.eye
 
-
     def get_projection_matrix(self):
+        """Get the projection matrix."""
         self.calc_projection()
         return self.persp
 
-
     def get_view_matrix(self):
+        """Get the view matrix."""
         self.calc_look_at()
         return self.look_at
 
-
     def send_keys(self, key):
+        """Handle keyboard input for camera movement."""
         if key == glfw.KEY_W:
             self.eye += self.front * self.keyboard_speed
         elif key == glfw.KEY_S:
@@ -99,10 +111,9 @@ class Camera:
             self.eye += self.right * self.keyboard_speed
         elif key == glfw.KEY_A:
             self.eye -= self.right * self.keyboard_speed
-
     
     def orbit(self, offset):
-
+        """Orbit camera around target point."""
         # Calculando as rotações horizontal e vertical
         qx = Quaternion(axis=np.cross(self.eye-self.at, self.up), angle=-offset[1]*self.mouse_speed)
         qy = Quaternion(axis=-self.up, angle=offset[0]*self.mouse_speed)
@@ -114,26 +125,20 @@ class Camera:
         self.front = quat.rotate(self.front)
         self.right = quat.rotate(self.right)
 
-
     def navigate(self, offset):
-
+        """Navigate camera in first-person/fly mode."""
         # Calculando as rotações horizontal e vertical
-        #qx = Quaternion(axis=np.cross(self.eye-self.at, self.up), angle=offset[1]*self.mouse_speed)
         qx = Quaternion(axis=self.right, angle=offset[1]*self.mouse_speed)
         qy = Quaternion(axis=-self.up, angle=offset[0]*self.mouse_speed)
 
         # Integrando e aplicando a manipulação
         quat = qx * qy
 
-        # m1 = np.identity(4)
-        # m1[0:3,3] = self.eye[0]-self.at[0]
         m1 = np.array([[1.0, 0.0, 0.0, self.eye[0]-self.at[0]],
                        [0.0, 1.0, 0.0, self.eye[1]-self.at[1]],
                        [0.0, 0.0, 1.0, self.eye[2]-self.at[2]],
                        [0.0, 0.0, 0.0, 1.0]])
 
-        # m2 = np.identity(4)
-        # m2[0:3,3] = -(self.eye[0]-self.at[0])
         m2 = np.array([[1.0, 0.0, 0.0, -(self.eye[0]-self.at[0])],
                        [0.0, 1.0, 0.0, -(self.eye[1]-self.at[1])],
                        [0.0, 0.0, 1.0, -(self.eye[2]-self.at[2])],
@@ -145,14 +150,15 @@ class Camera:
         self.front = quat.rotate(self.front)
         self.right = quat.rotate(self.right)
 
-
     def send_mouse(self, offset):
-        if self.type == "examine":
-            self.orbit(offset)
-        elif self.type == "fly":
-            self.navigate(offset)
-
+        """Handle mouse movement for camera control."""
+        # Only process if there's significant movement to avoid jitter
+        if abs(offset[0]) > 0.1 or abs(offset[1]) > 0.1:
+            if self.type == "examine":
+                self.orbit(offset)
+            elif self.type == "fly":
+                self.navigate(offset)
 
     def send_scroll(self, offset):
+        """Handle scroll wheel for camera zoom."""
         self.fov += self.scroll_speed * offset[1]
-

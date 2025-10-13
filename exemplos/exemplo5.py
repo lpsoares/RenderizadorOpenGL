@@ -12,13 +12,15 @@ Data: <DATA DE INÍCIO DA IMPLEMENTAÇÃO>
 
 import numpy as np
 import os
+from OpenGL.GL import *  # para constantes GL_*
 
-from renderizador.renderizador import *
-from renderizador.transformations import *
+from renderizador import Renderizador
+from renderizador.utils.transformations import *
+from renderizador.graphics.camera import Camera
 
 vertex_shader_source = r'''
 layout (location = 0) in vec3 position;
-layout (location = 3) in vec2 uv;
+layout (location = 3) in vec2 uv;  // Texture coordinates are 2D (u,v)
 
 out vec2 texture_uv;
 
@@ -49,9 +51,6 @@ if __name__ == '__main__':
     # Criando renderizador
     renderizador = Renderizador(resolution=(1024, 768))
 
-    # Passando Shaders e renderizando cena
-    renderizador.set_shaders(vertex_shader_source, fragment_shader_source)
-
     base = os.path.dirname(os.path.abspath(__file__))
     texture_file = os.path.join(base, "texture/tree-gf3fdc00cd_640.jpg")
     renderizador.set_texture(texture_file, 0)
@@ -79,4 +78,7 @@ if __name__ == '__main__':
 
     renderizador.add_geometry(GL_TRIANGLE_STRIP, vertices, uvs=uvs, index=index)
 
+    # Passando Shaders e renderizando cena
+    renderizador.set_shaders(vertex_shader_source, fragment_shader_source)
+   
     renderizador.render()

@@ -12,9 +12,10 @@ Data: <DATA DE INÍCIO DA IMPLEMENTAÇÃO>
 
 import numpy as np
 import os
+from OpenGL.GL import *  # para constantes GL_*
 
-from renderizador.renderizador import *
-from renderizador.transformations import *
+from renderizador import Renderizador
+from renderizador.utils.transformations import *
 
 fragment_shader_source = r'''
 

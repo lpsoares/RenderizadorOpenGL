@@ -11,9 +11,12 @@ Data: <DATA DE INÍCIO DA IMPLEMENTAÇÃO>
 """
 
 import numpy as np
+from OpenGL.GL import *  # para constantes GL_*
 
-from renderizador.renderizador import *
-from renderizador.transformations import *
+from renderizador import Renderizador
+from renderizador.utils.transformations import *
+from renderizador.graphics.camera import Camera
+
 
 vertex_shader_source = r'''
 layout (location = 0) in vec3 position;
@@ -89,9 +92,9 @@ if __name__ == '__main__':
     # Criando renderizador
     renderizador = Renderizador(resolution=(1024, 768), lock_mouse=False)
     
-    # Criando câmera
+    # Criando câmera e configurando no renderizador
     camera = Camera(type="examine", near=0.1, far=100, eye=[0.0, 0.0, 10.0])
-    Callbacks.camera  = camera  # Isso está ruim, melhorar
+    renderizador.set_camera(camera)  # Forma correta de configurar a câmera
 
     # Configura os Uniforms dos Shaders
     uniforms = {}
