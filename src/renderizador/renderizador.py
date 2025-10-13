@@ -148,8 +148,15 @@ class Renderizador:
         self._audio_initialized = False
         self._prev_play_state = None
 
+        # ShaderToy flags
         self.shader_toy = True
         self.shader_toy_mIsLowEnd = True  # Muda o parâmetro para HW_PERFORMANCE
+        
+        # Parâmetros de visualização de áudio (ajustáveis)
+        self.audio_db_min = -100.0  # piso em dB
+        self.audio_db_max = 40.0  # topo em dB
+        self.audio_decay_tau = 0.20  # constante de tempo do decaimento (s)
+        self.audio_gain = 1.0       # ganho linear antes do log/dB
 
     @contextlib.contextmanager
     def create_main_window(self):
@@ -535,6 +542,23 @@ class Renderizador:
                 else:
                     glfw.maximize_window(self.window)
 
+            # Controles de áudio (ShaderToy-like)
+            if imgui.tree_node("Audio\n(Shadertoy-like)"):
+                changed_min, new_min = imgui.slider_float("dB min", self.audio_db_min, -120.0, -20.0, '%.1f dB')
+                changed_max, new_max = imgui.slider_float("dB max", self.audio_db_max, -40.0, 0.0, '%.1f dB')
+                changed_tau, new_tau = imgui.slider_float("decay tau", self.audio_decay_tau, 0.03, 1.0, '%.2f s')
+                changed_gain, new_gain = imgui.slider_float("gain", self.audio_gain, 0.1, 8.0, '%.2f x')
+                if changed_min:
+                    self.audio_db_min = float(new_min)
+                if changed_max:
+                    # manter coerência: max > min
+                    self.audio_db_max = float(max(new_max, self.audio_db_min + 1.0))
+                if changed_tau:
+                    self.audio_decay_tau = float(new_tau)
+                if changed_gain:
+                    self.audio_gain = float(new_gain)
+                imgui.tree_pop()
+
 
     def render(self):
 
@@ -789,9 +813,40 @@ class Renderizador:
                         # window and FFT
                         hann_window = np.hanning(N).astype('float32')
                         spec = np.fft.rfft(seg * hann_window)
+
+                        # Inicializar arrays de suavização na primeira vez
+                        if not hasattr(audio, '_prev_fft'):
+                            audio._prev_fft = np.zeros(bins, dtype=np.float32)
+                            
                         mag = np.abs(spec)[:bins]
-                        # normalize (avoid div by zero)
-                        fft_row = mag / (np.max(mag) + 1e-9)
+
+                        # === MAPEAMENTO LINEAR DE FREQUÊNCIA (compatível com ShaderToy) ===
+                        # ShaderToy fornece 512 bins lineares em frequência na linha 0.
+                        # Portanto, usamos diretamente os primeiros 512 bins do rFFT.
+                        fft_bins = mag.astype(np.float32)
+
+                        # === ESCALA EM DECIBEIS (evita "estouro" e normalização por frame) ===
+                        # Converte magnitude para dB e mapeia de [db_min, db_max] -> [0,1]
+                        # Parâmetros ajustáveis via GUI: audio_db_min, audio_db_max, audio_gain
+                        db_min = float(self.audio_db_min)
+                        db_max = float(self.audio_db_max)
+                        eps = 1e-12
+                        fft_db = 20.0 * np.log10(self.audio_gain * fft_bins + eps)
+                        fft_norm = (fft_db - db_min) / (db_max - db_min)
+                        fft_norm = np.clip(fft_norm, 0.0, 1.0).astype(np.float32)
+
+                        # === SUAVIZAÇÃO TIPO PEAK-HOLD COM DECAIMENTO ===
+                        # Mais próximo do visual do ShaderToy do que média simples entre frames
+                        # Decaimento baseado no delta de tempo para consistência com FPS variável
+                        tau = float(self.audio_decay_tau)  # tempo de decaimento em segundos (ajustável)
+                        # garante valor positivo para o expoente
+                        dt = max(float(time_delta), 1e-3)
+                        decay = np.exp(-dt / tau).astype(np.float32)
+                        prev = audio._prev_fft.astype(np.float32)
+                        fft_row = np.maximum(fft_norm, prev * decay)
+                        
+                        # Atualizar histórico
+                        audio._prev_fft = fft_row.copy()
                         
                         # === ROW 1: Waveform (Time domain) ===
                         # resample waveform to 512 samples
