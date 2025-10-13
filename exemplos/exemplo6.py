@@ -24,10 +24,14 @@ fragment_shader_source = r'''
 
     //float sound = texture(iChannel0, vec2(uv.x, 0.25)).r;
 
-    vec3 col = 0.5 + 0.5*cos(iTime+uv.xyx+vec3(0,2,4));
+    //vec3 col = 0.5 + 0.5*cos(iTime+uv.xyx+vec3(0,2,4));
+
+    vec4 texColor = texture(iChannel0, uv);
+    fragColor = texColor;
+
 
     // Output to screen
-    fragColor = vec4(col,1.0);
+    //fragColor = vec4(col,1.0);
 }
 
 '''
@@ -40,6 +44,7 @@ if __name__ == '__main__':
 
     # Passando Shaders e renderizando cena
     renderizador.set_shaders(fragment_shader_source=fragment_shader_source)
-    renderizador.set_audio("synth.wav", 0)  # https://github.com/pdx-cs-sound/wavs/blob/main/synth.wav
+    renderizador.set_texture("tree-gf3fdc00cd_640.jpg", 0)
+    renderizador.set_audio("synth.wav", 1)  # https://github.com/pdx-cs-sound/wavs/blob/main/synth.wav
 
     renderizador.render()

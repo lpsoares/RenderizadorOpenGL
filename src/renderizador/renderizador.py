@@ -537,17 +537,25 @@ class Renderizador:
                 self.vertex_shader_source = shadertoy_vertex + self.vertex_shader_source
 
                 Renderizador.shadertoy_frag = f"#define HW_PERFORMANCE {0 if self.shader_toy_mIsLowEnd else 1}\n"
-                Renderizador.shadertoy_frag += "uniform vec2 iResolution;"+ \
-                                               "uniform float iTime;"+ \
-                                               "uniform float iTimeDelta;"+ \
-                                               "uniform float iFrameRate;"+ \
-                                               "uniform uint iFrame;"+ \
-                                               "uniform vec4 iMouse;\n"
-                                            #    "uniform float iChannelTime[4];"
-                                            #    "uniform vec4 iDate;"
-                                            #    "uniform float iSampleRate;"
-                                            #    "uniform vec3 iChannelResolution[4];"
-            
+                shadertoy_uniforms = "uniform vec2 iResolution;"+ \
+                                     "uniform float iTime;"+ \
+                                     "uniform float iTimeDelta;"+ \
+                                     "uniform float iFrameRate;"+ \
+                                     "uniform uint iFrame;"+ \
+                                     "uniform vec4 iMouse;\n"
+                                    #    "uniform float iChannelTime[4];"
+                                    #    "uniform vec4 iDate;"
+                                    #    "uniform float iSampleRate;"
+                                    #    "uniform vec3 iChannelResolution[4];"
+
+                if self.textures:
+                    shadertoy_uniforms += "uniform sampler2D iChannel0;\n" + \
+                                          "uniform sampler2D iChannel1;\n" + \
+                                          "uniform sampler2D iChannel2;\n" + \
+                                          "uniform sampler2D iChannel3;\n"
+
+                Renderizador.shadertoy_frag += shadertoy_uniforms
+
                 def mainImage(match):
                     signature = str(match.group())
                     signature = re.search(r'\((.*?)\)',signature).group(1)
@@ -591,6 +599,13 @@ class Renderizador:
                 uniforms["iFrame"] = glGetUniformLocation(program_id, 'iFrame')
                 uniforms["iMouse"] = glGetUniformLocation(program_id, 'iMouse')
 
+                if self.textures:
+                    uniforms["iChannel0"] = glGetUniformLocation(program_id, 'iChannel0')
+                    uniforms["iChannel1"] = glGetUniformLocation(program_id, 'iChannel1')
+                    uniforms["iChannel2"] = glGetUniformLocation(program_id, 'iChannel2')
+                    uniforms["iChannel3"] = glGetUniformLocation(program_id, 'iChannel3')
+
+            # Caso existam texturas
             if self.textures:
                 uniforms["texture_size"] = glGetUniformLocation(program_id, 'texture_size')
 
