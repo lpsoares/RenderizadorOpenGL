@@ -10,7 +10,7 @@ Data: 12 de Outubro de 2025
 """
 
 class Audio:
-    def __init__(self, filename, id):
-        self.id = id
+    def __init__(self, filename, channel):
+        self.channel = channel
         self.filename = filename
         self.audio_id = None

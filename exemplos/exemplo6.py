@@ -31,6 +31,12 @@ fragment_shader_source = r'''
     else
         col=col2;
 
+    if (uv.y < 0.5) {
+        float N = 16.0;
+        float v = texture(iChannel2, vec2(floor(uv.x*N)/N, 0)).x;
+        col = vec4(v,v,v,1.0);
+    }
+
 	fragColor = col;
 
 }

@@ -196,11 +196,11 @@ class Renderizador:
 
         self.uniforms_source = uniforms_source
 
-    def set_texture(self, filename, id):
-        self.textures.append(Texture(filename, id))
+    def set_texture(self, filename, channel):
+        self.textures.append(Texture(filename, channel))
 
-    def set_audio(self, filename, id):
-        self.audios.append(Audio(filename, id))
+    def set_audio(self, filename, channel):
+        self.audios.append(Audio(filename, channel))
 
     def add_geometry(self, mode, vertices, normals=None, colors=None, uvs=None, create_normals=False, index=None):
 
@@ -378,32 +378,58 @@ class Renderizador:
         ''' Carrega os arquivos de áudio usando soundfile '''
 
         for audio in self.audios:
-            audio.data, audio.sr = sf.read(audio.filename)
+            audio.data, audio.sf = sf.read(audio.filename)
+            # inicializa parâmetros para FFT->textura
+            # FFT size chosen so we get 512 frequency bins (N/2)
+            audio._fft_size = 1024
+            audio._fft_bins = audio._fft_size // 2
+            # create a GL texture to hold the FFT and waveform (512 x 2)
+            # Row 0: FFT (frequency domain)
+            # Row 1: Waveform (time domain)
+            audio._fft_tex = glGenTextures(1)
+            glBindTexture(GL_TEXTURE_2D, audio._fft_tex)
+            # allocate float RED texture (single channel, 512x2)
+            try:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, audio._fft_bins, 2, 0, GL_RED, GL_FLOAT, None)
+            except Exception:
+                # fallback if GL_R32F not available
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, audio._fft_bins, 2, 0, GL_RED, GL_FLOAT, None)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+            glBindTexture(GL_TEXTURE_2D, 0)
+            # position for FFT read (we will base on audio._pos updated by callback)
+            audio._fft_pos = 0
 
     
     def _init_audio_streams(self):
         # criar um OutputStream por arquivo de audio carregado
+        import threading
+        
         def make_callback(audio):
             n_samples = audio.data.shape[0]
             channels = 1 if audio.data.ndim == 1 else audio.data.shape[1]
             audio._pos = 0
+            audio._pos_lock = threading.Lock()
 
             def callback(outdata, frames, time_info, status):
                 if status:
                     # opcional: log
                     # print("sounddevice status:", status)
                     pass
-                start = audio._pos
-                end = start + frames
-                if end <= n_samples:
-                    chunk = audio.data[start:end]
-                    audio._pos = end % n_samples
-                else:
-                    # concatena tail + head para fazer loop
-                    part1 = audio.data[start:n_samples]
-                    part2 = audio.data[0:(end - n_samples)]
-                    chunk = np.concatenate([part1, part2], axis=0)
-                    audio._pos = (end - n_samples) % n_samples
+                with audio._pos_lock:
+                    start = audio._pos
+                    end = start + frames
+                    if end <= n_samples:
+                        chunk = audio.data[start:end]
+                        audio._pos = end % n_samples
+                    else:
+                        # concatena tail + head para fazer loop
+                        part1 = audio.data[start:n_samples]
+                        part2 = audio.data[0:(end - n_samples)]
+                        chunk = np.concatenate([part1, part2], axis=0)
+                        audio._pos = (end - n_samples) % n_samples
 
                 # assegura shape (frames, channels)
                 if channels == 1:
@@ -419,8 +445,9 @@ class Renderizador:
             channels = 1 if audio.data.ndim == 1 else audio.data.shape[1]
             # inicializa posição e cria stream, mas NÃO inicia automaticamente
             audio._pos = 0
+            audio._pos_lock = threading.Lock()
             audio._sd_stream = sd.OutputStream(
-                samplerate=audio.sr,
+                samplerate=audio.sf,
                 channels=channels,
                 dtype='float32',
                 callback=make_callback(audio)
@@ -469,6 +496,14 @@ class Renderizador:
                     # se start falhar, ignore para não quebrar render loop
                     audio._sd_stream_active = False
 
+    def _reset_audio_streams(self):
+        """Reset audio position to start (0) and pause streams."""
+        if not self._audio_initialized:
+            return
+        for audio in self.audios:
+            with audio._pos_lock:
+                audio._pos = 0
+
     # Todos os detalhes da interfacce gráfica de usuário
     def gui_interface(self):
         viewport = imgui.get_main_viewport()
@@ -479,6 +514,7 @@ class Renderizador:
             if imgui.arrow_button("Back", imgui.DIRECTION_LEFT):
                 self.time = 0.0
                 glfw.set_time(self.time)
+                self._reset_audio_streams()
             imgui.same_line()
             if self.play:
                 if imgui.button('||'):
@@ -559,7 +595,7 @@ class Renderizador:
                                     #    "uniform float iSampleRate;"
                                     #    "uniform vec3 iChannelResolution[4];"
 
-                if self.textures:
+                if self.textures or self.audios:
                     shadertoy_uniforms += "uniform sampler2D iChannel0;\n" + \
                                           "uniform sampler2D iChannel1;\n" + \
                                           "uniform sampler2D iChannel2;\n" + \
@@ -609,12 +645,10 @@ class Renderizador:
                 uniforms["iFrameRate"] = glGetUniformLocation(program_id, 'iFrameRate')
                 uniforms["iFrame"] = glGetUniformLocation(program_id, 'iFrame')
                 uniforms["iMouse"] = glGetUniformLocation(program_id, 'iMouse')
-
-                if self.textures:
-                    uniforms["iChannel0"] = glGetUniformLocation(program_id, 'iChannel0')
-                    uniforms["iChannel1"] = glGetUniformLocation(program_id, 'iChannel1')
-                    uniforms["iChannel2"] = glGetUniformLocation(program_id, 'iChannel2')
-                    uniforms["iChannel3"] = glGetUniformLocation(program_id, 'iChannel3')
+                uniforms["iChannel0"] = glGetUniformLocation(program_id, 'iChannel0')
+                uniforms["iChannel1"] = glGetUniformLocation(program_id, 'iChannel1')
+                uniforms["iChannel2"] = glGetUniformLocation(program_id, 'iChannel2')
+                uniforms["iChannel3"] = glGetUniformLocation(program_id, 'iChannel3')
 
             # Caso existam texturas
             if self.textures:
@@ -679,7 +713,10 @@ class Renderizador:
 
                 # detectar mudança de estado do play para pausar/resumir áudio
                 if self._prev_play_state is None:
+                    # primeira frame: iniciar áudio se play=True
                     self._prev_play_state = self.play
+                    if self.play:
+                        self._resume_audio_streams()
                 elif self._prev_play_state != self.play:
                     # transição detectada
                     if self.play:
@@ -723,6 +760,78 @@ class Renderizador:
                         if sampler_name in uniforms and uniforms[sampler_name] != -1:
                             # define qual texture unit o sampler deve usar
                             glUniform1i(uniforms[sampler_name], int(texture.channel))
+                
+                # Atualiza texturas de audio (FFT) e define uniforms relacionados
+                for audio in self.audios:
+                    # update FFT texture if available
+                    if getattr(audio, '_fft_tex', None) is not None:
+                        N = audio._fft_size
+                        bins = audio._fft_bins
+                        # use audio._pos as the 'end' index (next sample to play)
+                        # safely read position with lock
+                        with audio._pos_lock:
+                            end = int(audio._pos)
+                        
+                        start = end - N
+                        if start >= 0:
+                            seg = audio.data[start:end]
+                        else:
+                            # wrap-around
+                            seg = np.concatenate([audio.data[start:], audio.data[:end]], axis=0)
+                        # ensure mono
+                        if seg.ndim > 1:
+                            seg = np.mean(seg, axis=1)
+                        # pad if too short
+                        if seg.shape[0] < N:
+                            seg = np.pad(seg, (0, N - seg.shape[0]), mode='constant')
+                        
+                        # === ROW 0: FFT (Frequency domain) ===
+                        # window and FFT
+                        hann_window = np.hanning(N).astype('float32')
+                        spec = np.fft.rfft(seg * hann_window)
+                        mag = np.abs(spec)[:bins]
+                        # normalize (avoid div by zero)
+                        fft_row = mag / (np.max(mag) + 1e-9)
+                        
+                        # === ROW 1: Waveform (Time domain) ===
+                        # resample waveform to 512 samples
+                        # take evenly spaced samples from the audio segment
+                        indices = np.linspace(0, N-1, bins, dtype=int)
+                        waveform_row = seg[indices]
+                        # normalize to 0..1 range (assuming audio is -1..1)
+                        waveform_row = (waveform_row + 1.0) * 0.5
+                        waveform_row = np.clip(waveform_row, 0.0, 1.0)
+                        
+                        # Create 512x2 texture: [row0=FFT, row1=waveform]
+                        tex = np.zeros((2, bins), dtype=np.float32)
+                        tex[0, :] = fft_row
+                        tex[1, :] = waveform_row
+                        
+                        # ensure contiguous memory layout for pointer
+                        tex = np.ascontiguousarray(tex)
+
+                        # upload to GL texture: single channel RED format, 512x2
+                        glActiveTexture(GL_TEXTURE0 + audio.channel)
+                        glBindTexture(GL_TEXTURE_2D, audio._fft_tex)
+                        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, bins, 2, GL_RED, GL_FLOAT, get_pointer(tex))
+                        glBindTexture(GL_TEXTURE_2D, 0)
+
+                    #bind audio FFT texture to texture unit and set sampler uniform (iChannelN)
+                    if getattr(audio, '_fft_tex', None) is not None:
+                        glActiveTexture(GL_TEXTURE0 + audio.channel)
+                        glBindTexture(GL_TEXTURE_2D, audio._fft_tex)
+                    if self.shader_toy:
+                        sampler_name = f"iChannel{audio.channel}"
+                        if sampler_name in uniforms and uniforms[sampler_name] != -1:
+                            glUniform1i(uniforms[sampler_name], int(audio.channel))
+
+                    #pass audio position/time uniform if present
+                    pos_uniform = f"iChannelTime{audio.channel}"
+                    if pos_uniform in uniforms and uniforms[pos_uniform] != -1:
+                        # pass normalized time in seconds - safely read position with lock
+                        with audio._pos_lock:
+                            current_pos = float(audio._pos)
+                        glUniform1f(uniforms[pos_uniform], current_pos / float(audio.sf))
 
                 # Passa todos os uniforms para os shaders
                 parse_uniforms(self.uniforms_source, uniforms)
