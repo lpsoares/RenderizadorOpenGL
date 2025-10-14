@@ -74,10 +74,42 @@ def main():
     if args.frag_file:
         frag_file = args.frag_file
     else:
-        # Default to teste.frag in the script directory
-        base = os.path.dirname(os.path.abspath(__file__))
-        frag_file = os.path.join(base, "teste.frag")
-        print(f"Nenhum arquivo especificado. Usando o arquivo padrão: {frag_file}")
+        # List all .frag files under the 'exemplos' folder and ask the user to pick one
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        repo_root = os.path.abspath(os.path.join(current_dir, "..", "..", ".."))
+        exemplos_dir = os.path.join(repo_root, "exemplos")
+
+        candidates = []
+        if os.path.isdir(exemplos_dir):
+            for dirpath, _, filenames in os.walk(exemplos_dir):
+                for name in filenames:
+                    if name.lower().endswith(".frag"):
+                        full = os.path.join(dirpath, name)
+                        rel = os.path.relpath(full, exemplos_dir)
+                        candidates.append((rel, full))
+            candidates.sort(key=lambda x: x[0].lower())
+
+        if not candidates:
+            # Fallback to teste.frag in the utils directory
+            frag_file = os.path.join(current_dir, "teste.frag")
+            print("Nenhum arquivo .frag encontrado em 'exemplos/'.")
+            print(f"Usando o arquivo padrão: {frag_file}")
+        else:
+            print("Nenhum arquivo especificado. Escolha um dos shaders abaixo (pasta 'exemplos'):\n")
+            for idx, (rel, _) in enumerate(candidates, start=1):
+                print(f"  {idx:2d}) {rel}")
+            print("")
+            while True:
+                try:
+                    choice = input(f"Digite o número [1-{len(candidates)}] e pressione Enter: ").strip()
+                    sel = int(choice)
+                    if 1 <= sel <= len(candidates):
+                        frag_file = candidates[sel - 1][1]
+                        break
+                    else:
+                        print("Opção inválida. Tente novamente.")
+                except ValueError:
+                    print("Entrada inválida. Digite um número.")
     
     # Criando renderizador
     renderizador = Renderizador(resolution=(args.resolution[0], args.resolution[1]), lock_mouse=False)
