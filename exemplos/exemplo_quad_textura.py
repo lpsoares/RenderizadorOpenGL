@@ -4,10 +4,6 @@
 
 """
 Aplicação Gráfica Exemplo.
-
-Desenvolvido por: <SEU NOME AQUI>
-Disciplina: Computação Gráfica
-Data: <DATA DE INÍCIO DA IMPLEMENTAÇÃO>
 """
 
 import numpy as np
@@ -15,8 +11,7 @@ import os
 from OpenGL.GL import *  # para constantes GL_*
 
 from renderizador import Renderizador
-from renderizador.utils.transformations import *
-from renderizador.graphics.camera import Camera
+
 
 vertex_shader_source = r'''
 layout (location = 0) in vec3 position;
@@ -65,10 +60,10 @@ if __name__ == '__main__':
     )
 
     uvs = np.array(
-        [0.0, 1.0,
-        1.0, 1.0, 
-        0.0, 0.0, 
+        [0.0, 0.0,
         1.0, 0.0, 
+        0.0, 1.0, 
+        1.0, 1.0, 
         ], np.float32
     )
 

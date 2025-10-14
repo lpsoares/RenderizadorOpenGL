@@ -12,18 +12,18 @@ import time
 import re
 
 from renderizador.core.window import create_window
-from renderizador.core.gui import create_gui_interface
-from renderizador.graphics.geometry import parse_geometry
+#from renderizador.core.gui import create_gui_interface
+#from renderizador.graphics.geometry import parse_geometry
 from renderizador.graphics.shaders import compile_shader, link_shader, default_vertex_shader, default_fragment_shader
 from renderizador.graphics.texture import Texture
-from renderizador.utils import uniforms
+#from renderizador.utils import uniforms
 from renderizador.utils.callbacks import Callbacks
 from renderizador.utils.uniforms import parse_uniforms
 from renderizador.audio.audio import Audio
 from renderizador.audio.fft_processor import process_audio_fft
 
 # Usado para checar a plataforma Mac e saber se compatível com chamadas de OpenGL
-import platform
+#import platform
 
 # Vertices (forçando ser float32 para evitar que algum vire outro tipo)
 vertices = np.array(
@@ -240,9 +240,6 @@ class Renderizador:
             # Caso os parâmetros do Shader Toy estejam habilidatos
             if self.shader_toy:
                 # Adiciona os parâmetros automaticamente do Shader Toy
-                shadertoy_vertex = "#version 330 core\n"
-                self.vertex_shader_source = shadertoy_vertex + self.vertex_shader_source
-
                 shadertoy_frag = f"#define HW_PERFORMANCE {0 if self.shader_toy_mIsLowEnd else 1}\n"
                 shadertoy_uniforms = "uniform vec2 iResolution;"+ \
                                     "uniform float iTime;"+ \
@@ -276,7 +273,10 @@ class Renderizador:
                     return "void main(){\n"
             
                 self.fragment_shader_source = re.sub("void\s*mainImage\(([^\)]+)\)\s*\{", mainImage, self.fragment_shader_source)
-                self.fragment_shader_source = "#version 330 core\n" + nonlocal_shadertoy_frag[0] + self.fragment_shader_source
+                self.fragment_shader_source = nonlocal_shadertoy_frag[0] + self.fragment_shader_source
+
+            self.vertex_shader_source = "#version 330 core\n" + self.vertex_shader_source
+            self.fragment_shader_source = "#version 330 core\n" + self.fragment_shader_source
 
             # Compila os shaders
             vertexShader_id = compile_shader(GL_VERTEX_SHADER, self.vertex_shader_source)

@@ -1,5 +1,6 @@
 // Created by anatole duprat - XT95/2013
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
+// Source: https://www.shadertoy.com/view/MdX3zr
 
 float noise(vec3 p) //Thx to Las^Mercury
 {

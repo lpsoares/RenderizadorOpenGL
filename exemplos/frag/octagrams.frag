@@ -1,4 +1,6 @@
-// https://www.shadertoy.com/view/tlVGDt
+// Author:  whisky_shusuky
+// Source: https://www.shadertoy.com/view/tlVGDt
+
 precision highp float;
 
 

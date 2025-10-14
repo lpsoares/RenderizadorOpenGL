@@ -4,17 +4,10 @@
 
 """
 Aplicação Gráfica Exemplo.
-
-Desenvolvido por: <SEU NOME AQUI>
-Disciplina: Computação Gráfica
-Data: <DATA DE INÍCIO DA IMPLEMENTAÇÃO>
 """
 
-#import numpy as np
-from OpenGL.GL import *  # para constantes GL_*
-
 from renderizador import Renderizador
-from renderizador.utils.transformations import *
+
 
 fragment_shader_source = r'''
 

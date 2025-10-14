@@ -1,13 +1,13 @@
 // http://www.pouet.net/prod.php?which=57245
 // If you intend to reuse this shader, please add credits to 'Danilo Guanabara'
 
-layout (location = 0) out vec4 fragColor;
+//layout (location = 0) out vec4 fragColor;
 
 #define t iTime
 #define r iResolution.xy
 
-//void mainImage( out vec4 fragColor, in vec2 fragCoord ){
-void main(){
+void mainImage( out vec4 fragColor, in vec2 fragCoord ){
+//void main(){
 	vec3 c;
 	float l,z=t;
 	for(int i=0;i<3;i++) {

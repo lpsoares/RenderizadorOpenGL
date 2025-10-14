@@ -1,6 +1,6 @@
 // Created by evilryu
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
-
+// Source: https://www.shadertoy.com/view/MdXSWn
 
 // whether turn on the animation
 //#define phase_shift_on 

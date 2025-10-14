@@ -4,16 +4,11 @@
 
 """
 Aplicação Gráfica Exemplo.
-
-Desenvolvido por: <SEU NOME AQUI>
-Disciplina: Computação Gráfica
-Data: <DATA DE INÍCIO DA IMPLEMENTAÇÃO>
 """
 
 import os
-
 from renderizador import Renderizador
-from renderizador.utils.transformations import *
+
 
 if __name__ == '__main__':
 

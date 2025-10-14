@@ -4,20 +4,15 @@
 
 """
 Aplicação Gráfica Exemplo.
-
-Desenvolvido por: <SEU NOME AQUI>
-Disciplina: Computação Gráfica
-Data: <DATA DE INÍCIO DA IMPLEMENTAÇÃO>
 """
 
-import numpy as np
 import os
-from OpenGL.GL import *  # para constantes GL_*
-
 from renderizador import Renderizador
-from renderizador.utils.transformations import *
 
 fragment_shader_source = r'''
+
+    // Author: TekF
+    // Source: https://www.shadertoy.com/view/XdsGDB
 
     // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License.
 
@@ -441,9 +436,6 @@ fragment_shader_source = r'''
         
         fragColor = vec4(ToGamma(result),1.0);
     }
-
-
-
 '''
 
 
@@ -458,6 +450,6 @@ if __name__ == '__main__':
     base = os.path.dirname(os.path.abspath(__file__))
 
     texture_file = os.path.join(base, "texture/RGBANoiseMedium.png")
-    renderizador.set_texture(texture_file, 0)  # Noise
+    renderizador.set_texture(texture_file, 0, vflip=False)  # Noise
 
     renderizador.render()

@@ -1,3 +1,6 @@
+// by akel101
+// Source: https://www.shadertoy.com/view/4f2SzR
+
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
 

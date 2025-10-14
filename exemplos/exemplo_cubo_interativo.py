@@ -4,10 +4,6 @@
 
 """
 Aplicação Gráfica Exemplo.
-
-Desenvolvido por: <SEU NOME AQUI>
-Disciplina: Computação Gráfica
-Data: <DATA DE INÍCIO DA IMPLEMENTAÇÃO>
 """
 
 import numpy as np

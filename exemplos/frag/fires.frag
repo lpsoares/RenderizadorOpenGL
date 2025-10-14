@@ -1,8 +1,8 @@
 //////////////////////
 // Fire Flame shader
 //  xbe em 2014-07-22
-
-
+// Source: https://www.shadertoy.com/view/XsXSWS
+// procedural noise from IQ
 vec2 hash( vec2 p )
 {
 	p = vec2( dot(p,vec2(127.1,311.7)),

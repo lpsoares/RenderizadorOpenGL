@@ -1,4 +1,5 @@
 // Created by FabriceNeyret2 em 2016-01-18
+// Source: https://www.shadertoy.com/view/ldKGRR
 
 float D(vec2 p, float n) {  // display digit
     int i=int(p.y), b=int(exp2(floor(30.-p.x-n*3.)));
