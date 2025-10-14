@@ -15,6 +15,7 @@ def init_imgui(window):
     impl = GlfwRenderer(window)
     return impl
 
+
 def create_gui_interface(renderer):
     """Create the GUI interface for the application."""
     viewport = imgui.get_main_viewport()
@@ -40,6 +41,12 @@ def create_gui_interface(renderer):
         imgui.text(f"   {renderer.fps:.1f} fps  ")
         imgui.same_line()
         imgui.text(f"  {Callbacks.resolution[0]} x {Callbacks.resolution[1]}  ")
+        imgui.same_line()
+        label = "X" if renderer.mute else "M"
+        if imgui.button(label):
+            renderer.mute = not renderer.mute
+            renderer._set_audio_volume(0.0 if renderer.mute else 1.0)
+
         imgui.same_line()
         if imgui.button('[]'):
             if glfw.get_window_attrib(renderer.window, glfw.MAXIMIZED):

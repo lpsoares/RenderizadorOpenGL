@@ -99,6 +99,7 @@ class Renderizador:
         # audio control state
         self._audio_initialized = False
         self._prev_play_state = None
+        self.mute = False
 
         # ShaderToy flags
         self.shader_toy = True
@@ -192,6 +193,17 @@ class Renderizador:
         for audio in self.audios:
             with audio._pos_lock:
                 audio._pos = 0
+
+    def _set_audio_volume(self, volume=None):
+        """Set volume for all audio streams. If volume is None, use self.mute state."""
+        if not self._audio_initialized:
+            return
+        if volume is None:
+            volume = 0.0 if self.mute else 1.0
+        volume = float(max(0.0, min(1.0, volume)))
+        for audio in self.audios:
+            # aplicar no callback (stream não tem .volume)
+            setattr(audio, "_volume", volume)
 
     def render(self):
         """Main rendering loop."""

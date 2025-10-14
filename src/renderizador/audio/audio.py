@@ -30,6 +30,7 @@ class Audio:
         """
         self.filename = filename
         self.channel = channel
+        self._volume = 1.0  # volume level (0.0 to 1.0)
         self.data = None
         self.sf = None
         
@@ -97,11 +98,15 @@ def init_audio_streams(renderer):
                     chunk = np.concatenate([part1, part2], axis=0)
                     audio._pos = (end - n_samples) % n_samples
 
-            # assegura shape (frames, channels)
+            # aplica volume e assegura shape (frames, channels)
+            vol = float(getattr(audio, "_volume", 1.0))
             if channels == 1:
-                outdata[:] = chunk.reshape(-1, 1)
+                out = (chunk * vol).reshape(-1, 1)
             else:
-                outdata[:] = chunk
+                out = chunk * vol
+            # clip para evitar saturação e garantir dtype
+            out = np.clip(out, -1.0, 1.0).astype('float32', copy=False)
+            outdata[:] = out
 
         return callback
 
