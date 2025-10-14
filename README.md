@@ -75,6 +75,8 @@ src/renderizador/
 ├── graphics/              # Recursos gráficos
 │   ├── camera.py          # Sistema de câmera
 │   ├── geometry.py        # Manipulação de geometria
+│   ├── mesh.py            # Faz a gestão de malhas poligonais
+│   ├── primitives.py      # Gera primitivas como um quad para a tela cheia
 │   ├── shaders.py         # Compilação e gerenciamento de shaders
 │   └── texture.py         # Carregamento e manipulação de texturas
 │
