@@ -8,6 +8,7 @@ GUI interface using ImGui.
 import imgui
 from imgui.integrations.glfw import GlfwRenderer
 import glfw
+from renderizador.audio.audio import reset_audio_streams, set_audio_volume
 from renderizador.utils.callbacks import Callbacks
 
 def init_imgui(window):
@@ -27,7 +28,7 @@ def create_gui_interface(renderer):
         if imgui.arrow_button("Back", imgui.DIRECTION_LEFT):
             renderer.time = 0.0
             glfw.set_time(renderer.time)
-            renderer._reset_audio_streams()
+            reset_audio_streams(renderer)
         imgui.same_line()
         if renderer.play:
             if imgui.button('||'):
@@ -45,7 +46,7 @@ def create_gui_interface(renderer):
         label = "X" if renderer.mute else "M"
         if imgui.button(label):
             renderer.mute = not renderer.mute
-            renderer._set_audio_volume(0.0 if renderer.mute else 1.0)
+            set_audio_volume(renderer, 0.0 if renderer.mute else 1.0)
 
         imgui.same_line()
         if imgui.button('[]'):

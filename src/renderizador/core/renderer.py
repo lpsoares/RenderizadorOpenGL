@@ -11,19 +11,29 @@ import glfw
 import time
 import re
 
-from renderizador.core.window import create_window
-#from renderizador.core.gui import create_gui_interface
-#from renderizador.graphics.geometry import parse_geometry
-from renderizador.graphics.shaders import compile_shader, link_shader, default_vertex_shader, default_fragment_shader
-from renderizador.graphics.texture import Texture
-#from renderizador.utils import uniforms
+import imgui
+from renderizador.core.window import create_window, configure_window
+from renderizador.core.gui import init_imgui, gui_interface
+from renderizador.graphics.shaders import (
+    compile_shader,
+    link_shader,
+    default_vertex_shader,
+    default_fragment_shader,
+)
+from renderizador.graphics.texture import Texture, parse_textures
+from renderizador.graphics.geometry import create_geometry_data, parse_geometry
 from renderizador.utils.callbacks import Callbacks
 from renderizador.utils.uniforms import parse_uniforms
-from renderizador.audio.audio import Audio
+from renderizador.audio.audio import (
+    Audio,
+    init_audio_streams,
+    parse_audios,
+    pause_audio_streams,
+    resume_audio_streams,
+    stop_audio_streams,
+)
 from renderizador.audio.fft_processor import process_audio_fft
 
-# Usado para checar a plataforma Mac e saber se compatível com chamadas de OpenGL
-#import platform
 
 # Vertices (forçando ser float32 para evitar que algum vire outro tipo)
 vertices = np.array(
@@ -144,75 +154,12 @@ class Renderizador:
         Callbacks.camera = camera
         
     def add_geometry(self, mode, vertices, normals=None, colors=None, uvs=None, create_normals=False, index=None):
-        from renderizador.graphics.geometry import create_geometry_data
         self.data, self.mode, self.count = create_geometry_data(
             mode, vertices, normals, colors, uvs, create_normals, index
         )
 
-    def _stop_audio_streams(self):
-        for audio in self.audios:
-            stream = getattr(audio, '_sd_stream', None)
-            if stream is not None:
-                try:
-                    stream.stop()
-                    stream.close()
-                except Exception:
-                    pass
-
-    def _pause_audio_streams(self):
-        """Pause streams but preserve audio._pos so resume continues where left off."""
-        if not self._audio_initialized:
-            return
-        for audio in self.audios:
-            stream = getattr(audio, '_sd_stream', None)
-            if stream is not None and getattr(audio, '_sd_stream_active', False):
-                try:
-                    stream.stop()
-                except Exception:
-                    pass
-                audio._sd_stream_active = False
-
-    def _resume_audio_streams(self):
-        """Resume previously created streams. Streams must have been created by _init_audio_streams()."""
-        if not self._audio_initialized:
-            return
-        for audio in self.audios:
-            stream = getattr(audio, '_sd_stream', None)
-            if stream is not None and not getattr(audio, '_sd_stream_active', False):
-                try:
-                    stream.start()
-                    audio._sd_stream_active = True
-                except Exception:
-                    # se start falhar, ignore para não quebrar render loop
-                    audio._sd_stream_active = False
-
-    def _reset_audio_streams(self):
-        """Reset audio position to start (0) and pause streams."""
-        if not self._audio_initialized:
-            return
-        for audio in self.audios:
-            with audio._pos_lock:
-                audio._pos = 0
-
-    def _set_audio_volume(self, volume=None):
-        """Set volume for all audio streams. If volume is None, use self.mute state."""
-        if not self._audio_initialized:
-            return
-        if volume is None:
-            volume = 0.0 if self.mute else 1.0
-        volume = float(max(0.0, min(1.0, volume)))
-        for audio in self.audios:
-            # aplicar no callback (stream não tem .volume)
-            setattr(audio, "_volume", volume)
-
     def render(self):
         """Main rendering loop."""
-        import imgui
-        from renderizador.core.window import configure_window
-        from renderizador.core.gui import init_imgui
-        from renderizador.graphics.texture import parse_textures
-        from renderizador.audio.audio import init_audio_streams, parse_audios
-        from renderizador.graphics.geometry import parse_geometry
 
         imgui.create_context()
 
@@ -353,7 +300,6 @@ class Renderizador:
                 imgui.new_frame()
 
                 # Detalhes da interface da janela
-                from renderizador.core.gui import gui_interface
                 gui_interface(self)
                 
                 # Limpa a janela com a cor de fundo e apagar o z-buffer
@@ -373,15 +319,15 @@ class Renderizador:
                     # primeira frame: iniciar áudio se play=True
                     self._prev_play_state = self.play
                     if self.play:
-                        self._resume_audio_streams()
+                        resume_audio_streams(self)
                 elif self._prev_play_state != self.play:
                     # transição detectada
                     if self.play:
                         # resume áudio
-                        self._resume_audio_streams()
+                        resume_audio_streams(self)
                     else:
                         # pause áudio
-                        self._pause_audio_streams()
+                        pause_audio_streams(self)
                     self._prev_play_state = self.play
 
                 time_delta = self.time - passed_time
@@ -479,7 +425,7 @@ class Renderizador:
             # Limpa o VAO 
             glDeleteVertexArrays(1, [vao])
 
-            self._stop_audio_streams()
+            stop_audio_streams(self)
 
             impl.shutdown()
 

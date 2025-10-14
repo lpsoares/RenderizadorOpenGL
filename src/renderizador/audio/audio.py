@@ -128,4 +128,68 @@ def init_audio_streams(renderer):
     renderer._audio_initialized = True
     # iniciar streams somente se já estiver em play
     if renderer.play:
-        renderer._resume_audio_streams()
+        # Prefira método do renderer se existir; caso contrário, use helper local
+        if hasattr(renderer, '_resume_audio_streams'):
+            renderer._resume_audio_streams()
+        else:
+            resume_audio_streams(renderer)
+
+
+def stop_audio_streams(renderer):
+    """Stop and close all audio streams."""
+    for audio in renderer.audios:
+        stream = getattr(audio, '_sd_stream', None)
+        if stream is not None:
+            try:
+                stream.stop()
+                stream.close()
+            except Exception:
+                pass
+
+
+def pause_audio_streams(renderer):
+    """Pause streams but preserve positions so resume continues where left off."""
+    if not getattr(renderer, '_audio_initialized', False):
+        return
+    for audio in renderer.audios:
+        stream = getattr(audio, '_sd_stream', None)
+        if stream is not None and getattr(audio, '_sd_stream_active', False):
+            try:
+                stream.stop()
+            except Exception:
+                pass
+            audio._sd_stream_active = False
+
+
+def resume_audio_streams(renderer):
+    """Resume previously created streams."""
+    if not getattr(renderer, '_audio_initialized', False):
+        return
+    for audio in renderer.audios:
+        stream = getattr(audio, '_sd_stream', None)
+        if stream is not None and not getattr(audio, '_sd_stream_active', False):
+            try:
+                stream.start()
+                audio._sd_stream_active = True
+            except Exception:
+                audio._sd_stream_active = False
+
+
+def reset_audio_streams(renderer):
+    """Reset audio position to start (0)."""
+    if not getattr(renderer, '_audio_initialized', False):
+        return
+    for audio in renderer.audios:
+        with audio._pos_lock:
+            audio._pos = 0
+
+
+def set_audio_volume(renderer, volume=None):
+    """Set volume for all audio streams. If volume is None, uses renderer.mute state."""
+    if not getattr(renderer, '_audio_initialized', False):
+        return
+    if volume is None:
+        volume = 0.0 if getattr(renderer, 'mute', False) else 1.0
+    volume = float(max(0.0, min(1.0, volume)))
+    for audio in renderer.audios:
+        setattr(audio, "_volume", volume)
