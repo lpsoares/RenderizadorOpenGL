@@ -295,7 +295,10 @@ class Renderizador:
                 uniforms["iChannelResolution"] = [
                     glGetUniformLocation(program_id, f'iChannelResolution[{i}]') for i in range(4)
                 ]
-
+                uniforms["iChannelTime"] = [
+                    glGetUniformLocation(program_id, f'iChannelTime{i}') for i in range(4)
+                ]  # iChannelTime0, 1, 2, 3 = tempo do áudio em segundos
+                
             # Cadastra os Uniforms
             for field in self.uniforms_source:
                 uniforms[field] = glGetUniformLocation(program_id, field)
@@ -409,6 +412,8 @@ class Renderizador:
                         glActiveTexture(GL_TEXTURE0 + audio.channel)
                         glBindTexture(GL_TEXTURE_2D, audio._fft_tex)
                     if self.shader_toy:
+                        glUniform2f(uniforms["iChannelResolution"][audio.channel], 512, 2)  # FFT texture size
+                        glUniform1f(uniforms["iChannelTime"][audio.channel], float(passed_time))  # Passed time for audio channel
                         sampler_name = f"iChannel{audio.channel}"
                         if sampler_name in uniforms and uniforms[sampler_name] != -1:
                             glUniform1i(uniforms[sampler_name], int(audio.channel))

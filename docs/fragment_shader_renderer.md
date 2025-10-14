@@ -108,6 +108,7 @@ O renderizador fornece suporte para shaders no estilo ShaderToy, com as seguinte
 - `iMouse`: Posição e cliques do mouse (vec4)
 - `iChannelN`: Texturas/canais de entrada (sampler2D, N=0..3)
 - `iChannelResolution[N]`: Tamanho da textura (vec2)
+- `iChannelTime[N]`: Tempo de playback em segundos (float)
 
 ### Estrutura do Shader
 
