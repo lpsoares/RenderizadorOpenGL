@@ -64,6 +64,8 @@ O RenderizadorOpenGL suporta as seguintes uniformes do ShaderToy:
 | `iFrame` | `uint` | Contador de frames |
 | `iMouse` | `vec4` | Posição do mouse e cliques: xy=atual, zw=clique |
 | `iChannel0` - `iChannel3` | `sampler2D` | Texturas de entrada |
+| `iChannelResolution[N]` | `vec2` | Tamanho da textura |
+
 
 ## Exemplo Completo
 

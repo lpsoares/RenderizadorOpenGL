@@ -10,12 +10,29 @@ Disciplina: Computação Gráfica
 Data: 13 de Outubro de 2025
 """
 
+from html import parser
 import os
 import sys
 import argparse
+from pathlib import Path
 
 from renderizador import Renderizador
 from renderizador.utils.transformations import *
+
+IMG_EXTS = ('.png', '.jpg', '.jpeg', '.bmp', '.tga', '.gif', '.tiff')
+AUDIO_EXTS = ('.wav', '.mp3', '.ogg')
+
+
+def set_channel(res: Renderizador, path_str: str, idx: int):
+    p = Path(path_str)
+    ext = p.suffix.lower()
+    if ext in IMG_EXTS:
+        res.set_texture(str(p), idx)
+    elif ext in AUDIO_EXTS:
+        res.set_audio(str(p), idx)
+    else:
+        print(f"Erro: Formato não suportado para iChannel{idx}: {p}")
+        sys.exit(1)
 
 def load_fragment_shader(file_path):
     """
@@ -47,6 +64,10 @@ def main():
                         help='Caminho para o arquivo .frag a ser renderizado')
     parser.add_argument('--resolution', '-r', nargs=2, type=int, default=[600, 400],
                         help='Resolução da janela (largura altura), ex: -r 800 600')
+    for i in range(4):
+        parser.add_argument(f'--iChannel{i}', default=None,
+                            help=f'Caminho para textura ou áudio no iChannel{i}')
+  
     args = parser.parse_args()
     
     # Determine fragment shader file path
@@ -61,6 +82,11 @@ def main():
     # Criando renderizador
     renderizador = Renderizador(resolution=(args.resolution[0], args.resolution[1]), lock_mouse=False)
    
+    for i in range(4):
+        chan = getattr(args, f'iChannel{i}')
+        if chan:
+            set_channel(renderizador, chan, i)
+
     # Carregar o shader do arquivo
     text = load_fragment_shader(frag_file)
     
@@ -76,11 +102,3 @@ def main():
 if __name__ == '__main__':
     main()
 
-    # Set window title to show which file is being rendered
-    file_name = os.path.basename(frag_file)
-    renderizador.set_title(f"Fragment Shader: {file_name}")
-    
-    # Passando Shaders e renderizando cena
-    renderizador.set_shaders(fragment_shader_source=text)
-
-    renderizador.render()

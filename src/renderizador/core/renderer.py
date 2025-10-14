@@ -125,8 +125,8 @@ class Renderizador:
 
         self.uniforms_source = uniforms_source
 
-    def set_texture(self, filename, channel):
-        self.textures.append(Texture(filename, channel))
+    def set_texture(self, filename, channel, filter=GL_LINEAR, wrap=GL_REPEAT, vflip=True):
+        self.textures.append(Texture(filename, channel, filter=filter, wrap=wrap, vflip=vflip))
 
     def set_audio(self, filename, channel):
         self.audios.append(Audio(filename, channel))
@@ -236,13 +236,12 @@ class Renderizador:
                                     "uniform float iTimeDelta;"+ \
                                     "uniform float iFrameRate;"+ \
                                     "uniform uint iFrame;"+ \
-                                    "uniform vec4 iMouse;\n"
-
-                if self.textures or self.audios:
-                    shadertoy_uniforms += "uniform sampler2D iChannel0;\n" + \
-                                          "uniform sampler2D iChannel1;\n" + \
-                                          "uniform sampler2D iChannel2;\n" + \
-                                          "uniform sampler2D iChannel3;\n"
+                                    "uniform vec4 iMouse;"+ \
+                                    "uniform sampler2D iChannel0;" + \
+                                    "uniform sampler2D iChannel1;" + \
+                                    "uniform sampler2D iChannel2;" + \
+                                    "uniform sampler2D iChannel3;" + \
+                                    "uniform vec2 iChannelResolution[4];\n"  # (x=width,y=height)
 
                 shadertoy_frag += shadertoy_uniforms
 
@@ -293,9 +292,9 @@ class Renderizador:
                 uniforms["iChannel2"] = glGetUniformLocation(program_id, 'iChannel2')
                 uniforms["iChannel3"] = glGetUniformLocation(program_id, 'iChannel3')
 
-            # Caso existam texturas
-            if self.textures:
-                uniforms["texture_size"] = glGetUniformLocation(program_id, 'texture_size')
+                uniforms["iChannelResolution"] = [
+                    glGetUniformLocation(program_id, f'iChannelResolution[{i}]') for i in range(4)
+                ]
 
             # Cadastra os Uniforms
             for field in self.uniforms_source:
@@ -391,10 +390,9 @@ class Renderizador:
                     glActiveTexture(GL_TEXTURE0 + texture.channel)
                     glBindTexture(GL_TEXTURE_2D, texture.texture_id)
 
-                    # Tamanho da textura (se for usar)
-                    glUniform2f(uniforms["texture_size"], texture.image.shape[1], texture.image.shape[0])
                     # Se for shaderToy, faça o binding do sampler iChannelN -> texture unit N
                     if self.shader_toy:
+                        glUniform2f(uniforms["iChannelResolution"][texture.channel], texture.image.shape[1], texture.image.shape[0])
                         sampler_name = f"iChannel{texture.channel}"
                         if sampler_name in uniforms and uniforms[sampler_name] != -1:
                             # define qual texture unit o sampler deve usar
