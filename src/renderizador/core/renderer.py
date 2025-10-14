@@ -10,8 +10,8 @@ from OpenGL.GL import *
 import glfw
 import time
 import re
-
 import imgui
+
 from renderizador.core.window import create_window, configure_window
 from renderizador.core.gui import init_imgui, gui_interface
 from renderizador.graphics.shaders import (
@@ -22,7 +22,6 @@ from renderizador.graphics.shaders import (
 )
 from renderizador.graphics.texture import Texture, parse_textures
 from renderizador.graphics.geometry import create_geometry_data, parse_geometry
-from renderizador.graphics.mesh import Mesh
 from renderizador.graphics.primitives import fullscreen_quad
 from renderizador.utils.callbacks import Callbacks
 from renderizador.utils.uniforms import parse_uniforms
@@ -39,7 +38,7 @@ from renderizador.audio.fft_processor import process_audio_fft
 class Renderizador:
     """Main renderer class that coordinates the rendering pipeline."""
 
-    # Define a cor de fundo da renderização
+    # Define o título da janela da renderização
     def set_title(self, text):
         self.title = text
 
@@ -48,7 +47,7 @@ class Renderizador:
         self.background_color = color
 
     # Cria a janela de renderização
-    def __init__(self, resolution=(1024, 768), lock_mouse=False):
+    def __init__(self, resolution=(1024, 768), lock_mouse=False, shader_toy=True):
         self.window = None
  
         Callbacks.resolution = resolution
@@ -86,7 +85,7 @@ class Renderizador:
         self.mute = False
 
         # ShaderToy flags
-        self.shader_toy = True
+        self.shader_toy = shader_toy
         self.shader_toy_mIsLowEnd = True  # Muda o parâmetro para HW_PERFORMANCE
         
         # Parâmetros de visualização de áudio (ajustáveis)
