@@ -122,6 +122,7 @@ O renderizador fornece as seguintes uniformes compatíveis com ShaderToy:
 - `iFrameRate`: taxa de quadros
 - `iFrame`: contador de frames
 - `iMouse`: posição e cliques do mouse
+- `iDate`: data como ano, mês, dia e tempo em segundos
 - `iChannelN`: texturas/canais de entrada (sampler2D, N=0..3)
 - `iChannelResolution[N]`: tamanho da textura (vec2)
 - `iChannelTime[N]`: tempo de playback em segundos (float)

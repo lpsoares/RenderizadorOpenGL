@@ -63,6 +63,7 @@ O RenderizadorOpenGL suporta as seguintes uniformes do ShaderToy:
 | `iFrameRate` | `float` | Taxa de quadros (FPS) |
 | `iFrame` | `uint` | Contador de frames |
 | `iMouse` | `vec4` | Posição do mouse e cliques: xy=atual, zw=clique |
+| `iDate` | `vec4` | Data como ano, mês, dia e tempo em segundos |
 | `iChannel0` - `iChannel3` | `sampler2D` | Texturas de entrada |
 | `iChannelResolution[N]` | `vec2` | Tamanho da textura |
 | `iChannelTime[N]` | `float` | Tempo de playback em segundos |

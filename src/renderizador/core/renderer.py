@@ -16,6 +16,7 @@ from renderizador.core.gui import create_gui_interface
 from renderizador.graphics.geometry import parse_geometry
 from renderizador.graphics.shaders import compile_shader, link_shader, default_vertex_shader, default_fragment_shader
 from renderizador.graphics.texture import Texture
+from renderizador.utils import uniforms
 from renderizador.utils.callbacks import Callbacks
 from renderizador.utils.uniforms import parse_uniforms
 from renderizador.audio.audio import Audio
@@ -237,6 +238,7 @@ class Renderizador:
                                     "uniform float iFrameRate;"+ \
                                     "uniform uint iFrame;"+ \
                                     "uniform vec4 iMouse;"+ \
+                                    "uniform vec4 iDate;"+ \
                                     "uniform sampler2D iChannel0;" + \
                                     "uniform sampler2D iChannel1;" + \
                                     "uniform sampler2D iChannel2;" + \
@@ -287,6 +289,7 @@ class Renderizador:
                 uniforms["iFrameRate"] = glGetUniformLocation(program_id, 'iFrameRate')
                 uniforms["iFrame"] = glGetUniformLocation(program_id, 'iFrame')
                 uniforms["iMouse"] = glGetUniformLocation(program_id, 'iMouse')
+                uniforms["iDate"] = glGetUniformLocation(program_id, 'iDate')
                 uniforms["iChannel0"] = glGetUniformLocation(program_id, 'iChannel0')
                 uniforms["iChannel1"] = glGetUniformLocation(program_id, 'iChannel1')
                 uniforms["iChannel2"] = glGetUniformLocation(program_id, 'iChannel2')
@@ -386,6 +389,12 @@ class Renderizador:
                     glUniform1f(uniforms["iFrameRate"], self.fps)
                     glUniform1ui(uniforms["iFrame"], frame)
                     glUniform4fv(uniforms["iMouse"], 1, Callbacks.get_mouse_clicked())
+
+                    # pass date as (year, month, day, seconds in day)
+                    ts = time.time()  # epoch com fração
+                    lt = time.localtime(ts)
+                    seconds_in_day = lt.tm_hour * 3600 + lt.tm_min * 60 + lt.tm_sec + (ts % 1.0)
+                    glUniform4f(uniforms["iDate"], float(lt.tm_year), float(lt.tm_mon - 1), float(lt.tm_mday), float(seconds_in_day))
 
                 # Case existam texturas
                 for texture in self.textures:
