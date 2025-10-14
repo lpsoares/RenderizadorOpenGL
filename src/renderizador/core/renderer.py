@@ -22,6 +22,8 @@ from renderizador.graphics.shaders import (
 )
 from renderizador.graphics.texture import Texture, parse_textures
 from renderizador.graphics.geometry import create_geometry_data, parse_geometry
+from renderizador.graphics.mesh import Mesh
+from renderizador.graphics.primitives import fullscreen_quad
 from renderizador.utils.callbacks import Callbacks
 from renderizador.utils.uniforms import parse_uniforms
 from renderizador.audio.audio import (
@@ -33,34 +35,6 @@ from renderizador.audio.audio import (
     stop_audio_streams,
 )
 from renderizador.audio.fft_processor import process_audio_fft
-
-
-# Vertices (forçando ser float32 para evitar que algum vire outro tipo)
-vertices = np.array(
-    [-1.0, -1.0, -1.0,
-      1.0, -1.0, -1.0,
-     -1.0,  1.0, -1.0,
-      1.0,  1.0, -1.0,
-    ], np.float32
-)
-
-# Cores (forçando ser float32 para evitar que algum vire outro tipo)
-colors = np.array(
-    [1.0, 0.0, 0.0,
-     0.0, 1.0, 0.0,
-     0.0, 0.0, 1.0,
-     1.0, 1.0, 0.0
-    ], np.float32
-)
-
-# Coordenadas UV (forçando ser float32 para evitar que algum vire outro tipo)
-uvs = np.array(
-    [0.0, 0.0,
-     1.0, 0.0,
-     0.0, 1.0,
-     1.0, 1.0,
-    ], np.float32
-)
 
 class Renderizador:
     """Main renderer class that coordinates the rendering pipeline."""
@@ -171,7 +145,9 @@ class Renderizador:
             configure_window(self, window)
 
             if self.mode is None:
-                self.add_geometry(GL_TRIANGLE_STRIP, vertices, colors=colors, uvs=uvs, create_normals=True)
+                # Use the structured fullscreen quad primitive instead of raw arrays
+                quad = fullscreen_quad()  # Mesh with vertices/colors/uvs and mode GL_TRIANGLE_STRIP
+                self.add_geometry(quad.mode, quad.vertices, colors=quad.colors, uvs=quad.uvs, create_normals=False)
 
             vao, count = parse_geometry(self.data, self.mode, self.count)
             parse_textures(self.textures)
@@ -352,7 +328,8 @@ class Renderizador:
                     ts = time.time()  # epoch com fração
                     lt = time.localtime(ts)
                     seconds_in_day = lt.tm_hour * 3600 + lt.tm_min * 60 + lt.tm_sec + (ts % 1.0)
-                    glUniform4f(uniforms["iDate"], float(lt.tm_year), float(lt.tm_mon - 1), float(lt.tm_mday), float(seconds_in_day))
+                    # ShaderToy expects month in 1..12 (not zero-based)
+                    glUniform4f(uniforms["iDate"], float(lt.tm_year), float(lt.tm_mon), float(lt.tm_mday), float(seconds_in_day))
 
                 # Case existam texturas
                 for texture in self.textures:
